@@ -69,6 +69,18 @@
         <div id="confirm-error" class="error-message d-none">Passwords do not match.</div>
       </div>
 
+      <div id="teacher-group" class="form-check mb-3 d-none">
+        <input
+          class="form-check-input"
+          type="checkbox"
+          id="is-teacher"
+          name="is-teacher"
+        />
+        <label class="form-check-label" for="is-teacher">
+          I am a teacher
+        </label>
+      </div>
+
       <button type="submit" class="btn btn-primary w-100" id="submit-btn">Login</button>
 
       <div class="text-center mt-3">
@@ -83,6 +95,7 @@
     const title = document.getElementById("form-title");
     const submitBtn = document.getElementById("submit-btn");
     const confirmGroup = document.getElementById("confirm-group");
+    const teacherGroup = document.getElementById("teacher-group");
     const globalError = document.getElementById("global-error");
 
     let isLogin = true;
@@ -96,6 +109,7 @@
         ? "Don't have an account? Register"
         : "Already have an account? Login";
       confirmGroup.classList.toggle("d-none", isLogin);
+      teacherGroup.classList.toggle("d-none", isLogin);
       globalError.classList.add("d-none");
       form.reset();
       clearErrors();
@@ -113,6 +127,7 @@
       const email = form.email.value.trim();
       const password = form.password.value;
       const confirm = form["confirm-password"].value;
+      const isTeacher = form["is-teacher"].checked;
 
       let hasError = false;
 
@@ -134,10 +149,13 @@
       if (hasError) return;
 
       try {
+        const payload = { email, password };
+        if (!isLogin) payload.role = isTeacher ? "teacher" : "user";
+
         const res = await fetch(isLogin ? "/login" : "/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify(payload),
         });
 
         const data = await res.json();
