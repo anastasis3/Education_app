@@ -6,10 +6,6 @@ const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
 const bodyParser = require('body-parser');
 
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
-
-
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -41,63 +37,51 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.post('/register', async (req, res) => {
   const { email, password } = req.body;
 
-  if (!email || !password) return res.status(400).send('Email и пароль обязательны');
+  if (!email || !password) return res.status(400).json({ error: 'Email и пароль обязательны' });
 
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
     const result = await pool.query(
-      'INSERT INTO users (email, password_hash, role) VALUES ($1, $2, $3) RETURNING *',
-      [email, hashedPassword, 'student'] // или 'teacher' по умолчанию
+      'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id',
+      [email, hashedPassword]
     );
-
-    const user = result.rows[0];
-    res.render('dashboard', { user });
+    res.status(201).json({ message: 'Пользователь зарегистрирован', userId: result.rows[0].id });
   } catch (error) {
     if (error.code === '23505') {
-      res.status(409).send('Такой email уже зарегистрирован');
+      res.status(409).json({ error: 'Такой email уже зарегистрирован' });
     } else {
       console.error('Ошибка регистрации:', error);
-      res.status(500).send('Внутренняя ошибка сервера');
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
     }
   }
 });
-
 
 // Вход
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
-  if (!email || !password) return res.status(400).send('Email и пароль обязательны');
+  if (!email || !password) return res.status(400).json({ error: 'Email и пароль обязательны' });
 
   try {
     const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
     if (result.rows.length === 0) {
-      return res.status(401).send('Неверный email или пароль');
+      return res.status(401).json({ error: 'Неверный email или пароль' });
     }
 
     const user = result.rows[0];
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) {
-      return res.status(401).send('Неверный email или пароль');
+      return res.status(401).json({ error: 'Неверный email или пароль' });
     }
 
-    res.render('dashboard', { user });
+    res.status(200).json({ message: 'Успешный вход' });
   } catch (error) {
     console.error('Ошибка входа:', error);
-    res.status(500).send('Внутренняя ошибка сервера');
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 });
 
 
-// Стартовая страница
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'auth.html'));
-});
-
-// Страница dashboard
-app.get('/dashboard', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
-});
 
 // Запуск сервера
 app.listen(port, () => {
