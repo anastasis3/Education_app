@@ -44,7 +44,7 @@
   <% } else { %>
     <% questions.forEach((q, idx) => { %>
       <div class="question">
-        <strong>Question <%= idx + 1 %>:</strong> <%= q.text %> <% if (!q.active) { %> (Inactive) <% } %>
+        <strong>Question <%= idx + 1 %>:</strong> <%= q.text %> <% if (q.active === false) { %> (Inactive) <% } %>
       </div>
     <% }) %>
   <% } %>
