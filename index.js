@@ -28,8 +28,7 @@ app.use(session({
 
 // Шаблонизатор ejs
 app.set('view engine', 'ejs');
-// Вот здесь путь исправлен на public/views
-app.set('views', path.join(__dirname, 'public', 'views'));
+app.set('views', path.join(__dirname, 'views'));
 
 // Статические файлы
 app.use(express.static(path.join(__dirname, 'public')));
