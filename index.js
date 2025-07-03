@@ -90,12 +90,33 @@ app.post('/login', async (req, res) => {
 });
 
 // Панель пользователя
-app.get('/dashboard', (req, res) => {
+app.get('/dashboard', async (req, res) => {
   if (!req.session.user) {
     return res.status(403).send('Доступ запрещён. Пожалуйста, войдите в систему.');
   }
-  res.render('dashboard', { user: req.session.user });
+
+  const user = req.session.user;
+
+  if (user.role === 'teacher') {
+    try {
+      const formsResult = await pool.query(
+        'SELECT id, title FROM form_templates WHERE teacher_id = $1',
+        [user.id]
+      );
+
+      const forms = formsResult.rows;
+
+      return res.render('dashboard', { user, forms });
+    } catch (err) {
+      console.error('Ошибка при получении форм:', err);
+      return res.status(500).send('Ошибка сервера');
+    }
+  }
+
+  // Для студентов просто рендерим без форм
+  res.render('dashboard', { user, forms: [] });
 });
+
 
 // 👉 ДОБАВЛЯЕМ ВАЖНЫЙ РОУТ — форма создания
 app.get('/create-form', (req, res) => {
