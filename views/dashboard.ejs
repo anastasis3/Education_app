@@ -4,11 +4,11 @@
   <meta charset="UTF-8" />
   <title>Dashboard</title>
   <style>
-    /* Общие стили */
+    /* General styles */
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #f5f7fa;
-      color: #2c3e50;
+      background: linear-gradient(135deg, #c3cfe2, #ede7f6);
+      color: #1a1a2e;
       margin: 0;
       padding: 2rem;
       display: flex;
@@ -18,32 +18,35 @@
     main {
       max-width: 600px;
       width: 100%;
-      background: white;
+      background: #f7f9fc;
       padding: 2rem 3rem;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 12px rgba(26, 26, 46, 0.1);
       border-radius: 8px;
+      text-align: center;
     }
 
     h1 {
       font-weight: 600;
       font-size: 1.8rem;
       margin-bottom: 1.5rem;
-      border-bottom: 2px solid #2980b9;
+      border-bottom: 2px solid #7c4dff; /* Purple accent */
       padding-bottom: 0.5rem;
+      color: #2c3e50;
     }
 
     h2 {
-      color: #2980b9;
+      color: #5c6bc0; /* Blue-violet */
       font-weight: 600;
       margin-top: 2rem;
-      margin-bottom: 1rem;
-      font-size: 1.3rem;
+      margin-bottom: 1.5rem;
+      font-size: 1.4rem;
     }
 
     ul {
       list-style: none;
       padding: 0;
-      margin: 0;
+      margin: 0 auto;
+      max-width: 320px; /* limit width for buttons */
     }
 
     li {
@@ -51,25 +54,30 @@
     }
 
     a {
+      display: block;
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: linear-gradient(90deg, #7c4dff, #536dfe);
+      color: white;
+      font-weight: 600;
+      font-size: 1rem;
+      border-radius: 6px;
       text-decoration: none;
-      color: #34495e;
-      font-weight: 500;
-      padding: 0.5rem 1rem;
-      display: inline-block;
-      border: 1.5px solid transparent;
-      border-radius: 4px;
-      transition: all 0.3s ease;
+      text-align: center;
+      box-shadow: 0 4px 10px rgba(124, 77, 255, 0.4);
+      transition: background 0.3s ease, box-shadow 0.3s ease;
+      user-select: none;
     }
 
-    a:hover {
-      color: white;
-      background-color: #2980b9;
-      border-color: #2980b9;
-      box-shadow: 0 2px 8px rgba(41, 128, 185, 0.3);
+    a:hover,
+    a:focus {
+      background: linear-gradient(90deg, #536dfe, #7c4dff);
+      box-shadow: 0 6px 14px rgba(83, 109, 254, 0.6);
+      outline: none;
     }
 
     p {
-      color: #e74c3c;
+      color: #8e24aa; /* Purple */
       font-weight: 600;
       margin-top: 2rem;
       font-size: 1rem;
@@ -78,23 +86,23 @@
 </head>
 <body>
   <main>
-    <h1>Добро пожаловать, <%= user.email %>!</h1>
+    <h1>Welcome, <%= user.email %>!</h1>
 
     <% if (user.role === 'teacher') { %>
-      <h2>Учительский дашборд</h2>
+      <h2>Teacher Dashboard</h2>
       <ul>
-        <li><a href="/forms">Список созданных форм</a></li>
-        <li><a href="/create-form">Создать задание</a></li>
-        <li><a href="/results">Смотреть результаты</a></li>
+        <li><a href="/forms">List of Created Forms</a></li>
+        <li><a href="/create-form">Create Assignment</a></li>
+        <li><a href="/results">View Results</a></li>
       </ul>
     <% } else if (user.role === 'student') { %>
-      <h2>Форма для ученика</h2>
+      <h2>Student Form</h2>
       <ul>
-        <li><a href="/active-form">Заполнить активное задание</a></li>
-        <li><a href="/grades">Посмотреть оценки</a></li>
+        <li><a href="/active-form">Fill Active Assignment</a></li>
+        <li><a href="/grades">View Grades</a></li>
       </ul>
     <% } else { %>
-      <p>Неподдерживаемая роль</p>
+      <p>Unsupported role</p>
     <% } %>
   </main>
 </body>
