@@ -12,6 +12,17 @@
       margin: 2rem auto;
       padding: 2rem;
     }
+    a, button {
+      color: #4169e1;
+      text-decoration: none;
+      cursor: pointer;
+      font-weight: 600;
+      border: none;
+      background: none;
+      padding: 0;
+      font-size: 1rem;
+      transition: color 0.3s ease;
+    }
     h1 {
       color: #4b4fcf;
     }
@@ -26,7 +37,7 @@
 </head>
 <body>
   <h1><%= form.title %></h1>
-  <a href="/my-forms">Back to forms list</a><br><br>
+  <a href="/forms">Back to forms list</a><br><br>
 
   <% if (questions.length === 0) { %>
     <p>No questions in this form yet.</p>
