@@ -1,12 +1,27 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Панель пользователя</title>
+  <title>Dashboard</title>
 </head>
 <body>
   <h1>Добро пожаловать, <%= user.email %>!</h1>
-  <p>Ваша роль: <%= user.role %></p>
-  <a href="/logout">Выйти</a>
+
+  <% if (user.role === 'teacher') { %>
+    <h2>Учительский дашборд</h2>
+    <ul>
+      <li><a href="/forms">Список созданных форм</a></li>
+      <li><a href="/create-form">Создать задание</a></li>
+      <li><a href="/results">Смотреть результаты</a></li>
+    </ul>
+  <% } else if (user.role === 'student') { %>
+    <h2>Форма для ученика</h2>
+    <ul>
+      <li><a href="/active-form">Заполнить активное задание</a></li>
+      <li><a href="/grades">Посмотреть оценки</a></li>
+    </ul>
+  <% } else { %>
+    <p>Неподдерживаемая роль</p>
+  <% } %>
 </body>
 </html>
