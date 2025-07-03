@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Мои формы</title>
+</head>
+<body>
+  <h1>Формы пользователя <%= user.email %></h1>
+  <a href="/dashboard">Назад на панель</a><br><br>
+
+  <% if (forms.length === 0) { %>
+    <p>Вы ещё не создали ни одной формы.</p>
+  <% } else { %>
+    <ul>
+      <% forms.forEach(form => { %>
+        <li>
+          <strong><%= form.title %></strong>
+          — создана: <%= new Date(form.created_at).toLocaleString('ru-RU') %>
+        </li>
+      <% }) %>
+    </ul>
+  <% } %>
+
+  <br>
+  <a href="/create-form">Создать новую форму</a>
+</body>
+</html>

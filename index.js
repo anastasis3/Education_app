@@ -134,12 +134,36 @@ app.post('/create-form', async (req, res) => {
       }
     }
 
-    res.send('Форма успешно создана!');
+    res.redirect('/dashboard');
   } catch (err) {
     console.error('Ошибка при создании формы:', err);
     res.status(500).send('Ошибка сервера');
   }
 });
+
+
+
+// Маршрут для просмотра всех форм текущего учителя
+app.get('/forms', async (req, res) => {
+  if (!req.session.user || req.session.user.role !== 'teacher') {
+    return res.status(403).send('Доступ запрещён');
+  }
+
+  try {
+    const teacherId = req.session.user.id;
+    const result = await pool.query(
+      'SELECT * FROM form_templates WHERE teacher_id = $1 ORDER BY created_at DESC',
+      [teacherId]
+    );
+
+    res.render('forms', { forms: result.rows, user: req.session.user });
+  } catch (err) {
+    console.error('Ошибка при получении форм:', err);
+    res.status(500).send('Ошибка сервера');
+  }
+});
+
+
 
 // Запуск сервера
 app.listen(port, () => {
