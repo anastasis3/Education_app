@@ -3,15 +3,130 @@
 <head>
   <meta charset="UTF-8" />
   <title>Results for <%= form.title %></title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f9faff;
+      color: #333;
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 2rem;
+    }
+
+    h1 {
+      color: #4b4fcf;
+      margin-bottom: 2rem;
+    }
+
+    a {
+      color: #4169e1;
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.3s ease;
+    }
+
+    a:hover {
+      color: #5a4fcf;
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-bottom: 2rem;
+      padding: 0.5rem 1rem;
+      background: #e9ecef;
+      border-radius: 6px;
+      color: #495057 !important;
+    }
+
+    .back-link:hover {
+      background: #dee2e6;
+    }
+
+    .no-responses {
+      text-align: center;
+      color: #666;
+      font-style: italic;
+      padding: 2rem;
+      background: #f0f4ff;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+
+    .results-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .results-table th {
+      background: linear-gradient(90deg, #4169e1, #7b68ee);
+      color: white;
+      padding: 1rem;
+      text-align: left;
+      font-weight: bold;
+    }
+
+    .results-table td {
+      padding: 1rem;
+      border-bottom: 1px solid #e9ecef;
+    }
+
+    .results-table tr:nth-child(even) {
+      background: #f8f9fa;
+    }
+
+    .results-table tr:hover {
+      background: #f0f4ff;
+    }
+
+    .student-email {
+      color: #495057;
+      font-weight: 500;
+    }
+
+    .submitted-date {
+      color: #666;
+      font-size: 0.9rem;
+    }
+
+    .view-grade-btn {
+      background: linear-gradient(90deg, #28a745, #20c997);
+      color: white !important;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: bold;
+      font-size: 0.9rem;
+      transition: background 0.3s ease;
+    }
+
+    .view-grade-btn:hover {
+      background: linear-gradient(90deg, #218838, #1aa085);
+      color: white !important;
+    }
+
+    .row-number {
+      background: #f8f9fa;
+      font-weight: bold;
+      text-align: center;
+      color: #495057;
+    }
+  </style>
 </head>
 <body>
+  <a href="/forms" class="back-link">← Back to forms list</a>
+  
   <h1>Results for <%= form.title %></h1>
-  <a href="/forms">Back to forms list</a><br><br>
 
   <% if (responses.length === 0) { %>
-    <p>No responses submitted yet.</p>
+    <div class="no-responses">
+      <p>No responses submitted yet.</p>
+    </div>
   <% } else { %>
-    <table border="1" cellpadding="5" cellspacing="0">
+    <table class="results-table">
       <thead>
         <tr>
           <th>#</th>
@@ -23,10 +138,10 @@
       <tbody>
         <% responses.forEach((r, idx) => { %>
           <tr>
-            <td><%= idx + 1 %></td>
-            <td><%= r.user_name %></td>
-            <td><%= new Date(r.submitted_at).toLocaleString() %></td>
-            <td><a href="/results/view/<%= r.form_id %>/<%= r.user_id %>">View & Grade</a></td>
+            <td class="row-number"><%= idx + 1 %></td>
+            <td class="student-email"><%= r.user_name %></td>
+            <td class="submitted-date"><%= new Date(r.submitted_at).toLocaleString() %></td>
+            <td><a href="/results/view/<%= r.form_id %>/<%= r.user_id %>" class="view-grade-btn">View & Grade</a></td>
           </tr>
         <% }) %>
       </tbody>
