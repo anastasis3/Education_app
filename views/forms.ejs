@@ -96,11 +96,23 @@
     .create-new-form:hover {
       background: linear-gradient(90deg, #5a4fcf, #9a81f7);
     }
+    .back-link {
+      display: inline-block;
+      margin-bottom: 2rem;
+      padding: 0.5rem 1rem;
+      background: #e9ecef;
+      border-radius: 6px;
+      color: #495057 !important;
+    }
+
+    .back-link:hover {
+      background: #dee2e6;
+    }
   </style>
 </head>
 <body>
   <h1>User Forms for <%= user.email %></h1>
-  <a href="/dashboard">Back to dashboard</a><br><br>
+  <a href="/dashboard" class="back-link">Back to dashboard</a><br><br>
 
   <% if (forms.length === 0) { %>
     <p>You have not created any forms yet.</p>

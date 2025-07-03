@@ -8,39 +8,31 @@ const bcrypt = require('bcrypt');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Подключение к базе данных
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false },
 });
 
-// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Сессии
 app.use(session({
   secret: process.env.SESSION_SECRET || 'secretKey',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 7 * 24 * 60 * 60 * 1000 } // 1 неделя
+  cookie: { maxAge: 7 * 24 * 60 * 60 * 1000 } 
 }));
 
-// Настройка EJS
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// Статические файлы
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ==================== Роуты ==================== //
 
-// Главная страница (авторизация)
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'auth.html'));
 });
 
-// Регистрация
 app.post('/register', async (req, res) => {
   const { email, password, role } = req.body;
   if (!email || !password || !role) {
@@ -64,7 +56,6 @@ app.post('/register', async (req, res) => {
   }
 });
 
-// Вход
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email и пароль обязательны' });
@@ -97,7 +88,7 @@ app.get('/dashboard', (req, res) => {
   res.render('dashboard', { user: req.session.user });
 });
 
-// 👉 ДОБАВЛЯЕМ ВАЖНЫЙ РОУТ — форма создания
+// форма создания
 app.get('/create-form', (req, res) => {
   if (!req.session.user || req.session.user.role !== 'teacher') {
     return res.status(403).send('Доступ запрещён. Только для учителей.');
@@ -141,8 +132,6 @@ app.post('/create-form', async (req, res) => {
   }
 });
 
-
-
 // Маршрут для просмотра всех форм текущего учителя
 app.get('/forms', async (req, res) => {
   if (!req.session.user || req.session.user.role !== 'teacher') {
@@ -163,8 +152,6 @@ app.get('/forms', async (req, res) => {
   }
 });
 
-
-
 app.get('/edit-form/:id', async (req, res) => {
   if (!req.session.user || req.session.user.role !== 'teacher') {
     return res.status(403).send('Access denied. Teachers only.');
@@ -184,7 +171,6 @@ app.get('/edit-form/:id', async (req, res) => {
     }
 
     const form = formResult.rows[0];
-
     const questionsResult = await pool.query(
       'SELECT * FROM questions WHERE form_id = $1 ORDER BY question_order',
       [formId]
@@ -200,8 +186,6 @@ app.get('/edit-form/:id', async (req, res) => {
   }
 });
 
-
-
 //ОБНОВЛЕНИЕ ФОРМЫ
 app.post('/edit-form/:id', async (req, res) => {
   if (!req.session.user || req.session.user.role !== 'teacher') {
@@ -213,7 +197,6 @@ app.post('/edit-form/:id', async (req, res) => {
   const { title } = req.body;
 
   try {
-    // Проверяем принадлежность формы пользователю
     const formCheck = await pool.query(
       'SELECT * FROM form_templates WHERE id = $1 AND teacher_id = $2',
       [formId, userId]
@@ -223,16 +206,12 @@ app.post('/edit-form/:id', async (req, res) => {
       return res.status(404).send('Form not found or access denied');
     }
 
-    // Обновляем заголовок
     await pool.query(
       'UPDATE form_templates SET title = $1 WHERE id = $2',
       [title, formId]
     );
 
-    // Удаляем старые вопросы, чтобы заменить на новые
     await pool.query('DELETE FROM questions WHERE form_id = $1', [formId]);
-
-    // Вставляем вопросы заново
     for (let i = 1; i <= 4; i++) {
       const isActive = req.body[`active_${i}`] === 'on';
       const questionText = req.body[`question_${i}`]?.trim();
@@ -253,8 +232,6 @@ app.post('/edit-form/:id', async (req, res) => {
   }
 });
 
-
-//УДАЛЕНИЕ ФОРМЫ
 //УДАЛЕНИЕ ФОРМЫ
 app.post('/delete-form/:id', async (req, res) => {
   if (!req.session.user || req.session.user.role !== 'teacher') {
@@ -265,7 +242,6 @@ app.post('/delete-form/:id', async (req, res) => {
   const userId = req.session.user.id;
 
   try {
-    // Проверяем, что форма принадлежит текущему учителю
     const formCheck = await pool.query(
       'SELECT * FROM form_templates WHERE id = $1 AND teacher_id = $2',
       [formId, userId]
@@ -275,10 +251,8 @@ app.post('/delete-form/:id', async (req, res) => {
       return res.status(404).send('Form not found or access denied');
     }
 
-    // Удаляем связанные вопросы
     await pool.query('DELETE FROM questions WHERE form_id = $1', [formId]);
 
-    // Удаляем саму форму
     await pool.query('DELETE FROM form_templates WHERE id = $1', [formId]);
 
     res.redirect('/forms');
@@ -328,7 +302,6 @@ app.get('/view-form/:id', async (req, res) => {
 
 
 //РЕЗУЛЬТАТЫ
-
 app.get('/results/:formId', async (req, res) => {
   if (!req.session.user) {
     return res.status(403).send('Access denied');
@@ -338,7 +311,6 @@ app.get('/results/:formId', async (req, res) => {
   const userId = req.session.user.id;
 
   try {
-    // Проверяем, что форма принадлежит учителю
     const formResult = await pool.query(
       'SELECT * FROM form_templates WHERE id = $1 AND teacher_id = $2',
       [formId, userId]
@@ -350,8 +322,6 @@ app.get('/results/:formId', async (req, res) => {
 
     const form = formResult.rows[0];
 
-    // Получаем список ответов по форме с именами учеников
-// Получаем список ответов по форме с email учеников
     const responsesResult = await pool.query(`
       SELECT fr.id as response_id, u.id as user_id, u.email as user_name, fr.submitted_at, fr.form_id
       FROM form_responses fr
@@ -359,7 +329,7 @@ app.get('/results/:formId', async (req, res) => {
       WHERE fr.form_id = $1
       ORDER BY fr.submitted_at DESC
     `, [formId]);
-    
+
     res.render('results-list', {
       user: req.session.user,
       form,
@@ -372,8 +342,6 @@ app.get('/results/:formId', async (req, res) => {
   }
 });
 
-
-
 //ОЦЕНКА КОНКРЕТНОГО ОТВЕТА
 
 app.post('/results/grade', async (req, res) => {
@@ -385,7 +353,6 @@ app.post('/results/grade', async (req, res) => {
   const { student_id, form_id, grade, comment } = req.body;
 
   try {
-    // Проверка: форма принадлежит учителю
     const formCheck = await pool.query(
       'SELECT id FROM form_templates WHERE id = $1 AND teacher_id = $2',
       [form_id, teacherId]
@@ -395,20 +362,17 @@ app.post('/results/grade', async (req, res) => {
       return res.status(403).send('Access denied or form not found');
     }
 
-    // Проверка, есть ли уже оценка от этого учителя для этого ученика и формы
     const existingGrade = await pool.query(
       'SELECT id FROM grades WHERE teacher_id = $1 AND student_id = $2 AND form_id = $3',
       [teacherId, student_id, form_id]
     );
 
     if (existingGrade.rowCount > 0) {
-      // Обновляем оценку и комментарий
       await pool.query(
         `UPDATE grades SET grade = $1, comment = $2, graded_at = NOW() WHERE id = $3`,
         [grade, comment, existingGrade.rows[0].id]
       );
     } else {
-      // Вставляем новую оценку
       await pool.query(
         `INSERT INTO grades (teacher_id, student_id, form_id, grade, comment) VALUES ($1, $2, $3, $4, $5)`,
         [teacherId, student_id, form_id, grade, comment]
@@ -433,7 +397,6 @@ app.get('/results/view/:formId/:studentId', async (req, res) => {
   const { formId, studentId } = req.params;
 
   try {
-    // Проверяем, что форма принадлежит учителю
     const formCheck = await pool.query(
       'SELECT * FROM form_templates WHERE id = $1 AND teacher_id = $2',
       [formId, teacherId]
@@ -443,7 +406,6 @@ app.get('/results/view/:formId/:studentId', async (req, res) => {
       return res.status(403).send('Access denied or form not found');
     }
 
-    // Получаем ответы ученика по этой форме
     const answersResult = await pool.query(
       `SELECT q.question_text, a.answer_text, a.file_url
        FROM answers a
@@ -453,7 +415,6 @@ app.get('/results/view/:formId/:studentId', async (req, res) => {
       [formId, studentId]
     );
 
-    // Получаем оценку и комментарий, если есть
     const gradeResult = await pool.query(
       `SELECT grade, comment FROM grades
        WHERE teacher_id = $1 AND student_id = $2 AND form_id = $3`,
@@ -472,9 +433,6 @@ app.get('/results/view/:formId/:studentId', async (req, res) => {
     res.status(500).send('Server error');
   }
 });
-
-
-
 
 // Роут для выбора формы для просмотра результатов
 app.get('/select-form-results', async (req, res) => {

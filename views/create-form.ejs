@@ -62,10 +62,23 @@
     button:hover {
       background: #5a4fcf;
     }
+    .back-link {
+      display: inline-block;
+      margin-bottom: 2rem;
+      padding: 0.5rem 1rem;
+      background: #e9ecef;
+      border-radius: 6px;
+      color: #495057 !important;
+    }
+
+    .back-link:hover {
+      background: #dee2e6;
+    }
   </style>
 </head>
 <body>
   <h1>Create Assignment</h1>
+  <a href="/dashboard" class="back-link">Back to dashboard</a><br><br>
   <form action="/create-form" method="POST">
   <label for="title">Title:</label>
   <input type="text" id="title" name="title" placeholder="Enter form title" required />
