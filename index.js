@@ -351,14 +351,15 @@ app.get('/results/:formId', async (req, res) => {
     const form = formResult.rows[0];
 
     // Получаем список ответов по форме с именами учеников
+// Получаем список ответов по форме с email учеников
     const responsesResult = await pool.query(`
-      SELECT fr.id as response_id, u.id as user_id, u.name as user_name, fr.submitted_at, fr.form_id
+      SELECT fr.id as response_id, u.id as user_id, u.email as user_name, fr.submitted_at, fr.form_id
       FROM form_responses fr
       JOIN users u ON fr.user_id = u.id
       WHERE fr.form_id = $1
       ORDER BY fr.submitted_at DESC
     `, [formId]);
-
+    
     res.render('results-list', {
       user: req.session.user,
       form,
