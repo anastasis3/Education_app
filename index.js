@@ -474,6 +474,28 @@ app.get('/results/view/:formId/:studentId', async (req, res) => {
 
 
 
+
+// Роут для выбора формы для просмотра результатов
+app.get('/select-form-results', async (req, res) => {
+  if (!req.session.user || req.session.user.role !== 'teacher') {
+    return res.status(403).send('Доступ запрещён');
+  }
+
+  try {
+    const teacherId = req.session.user.id;
+    const result = await pool.query(
+      'SELECT * FROM form_templates WHERE teacher_id = $1 ORDER BY created_at DESC',
+      [teacherId]
+    );
+
+    res.render('select-form-results', { forms: result.rows, user: req.session.user });
+  } catch (err) {
+    console.error('Ошибка при получении форм:', err);
+    res.status(500).send('Ошибка сервера');
+  }
+});
+
+
 // Запуск сервера
 app.listen(port, () => {
   console.log(`🚀 Сервер запущен на порту ${port}`);

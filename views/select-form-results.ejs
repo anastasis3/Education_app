@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Select Form to View Results</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f9faff;
+      color: #333;
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 2rem;
+    }
+
+    h1 {
+      color: #4b4fcf;
+      margin-bottom: 2rem;
+    }
+
+    a {
+      color: #4169e1;
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.3s ease;
+    }
+
+    a:hover {
+      color: #5a4fcf;
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-bottom: 2rem;
+      padding: 0.5rem 1rem;
+      background: #e9ecef;
+      border-radius: 6px;
+      color: #495057 !important;
+    }
+
+    .back-link:hover {
+      background: #dee2e6;
+    }
+
+    .form-card {
+      background: #f0f4ff;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background-color 0.3s ease;
+    }
+
+    .form-card:hover {
+      background-color: #d9e0ff;
+    }
+
+    .form-info {
+      flex-grow: 1;
+    }
+
+    .form-title {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 0.5rem;
+    }
+
+    .form-date {
+      color: #666;
+      font-size: 0.9rem;
+    }
+
+    .view-results-btn {
+      background: linear-gradient(90deg, #4169e1, #7b68ee);
+      color: white !important;
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: background 0.3s ease;
+    }
+
+    .view-results-btn:hover {
+      background: linear-gradient(90deg, #5a4fcf, #9a81f7);
+    }
+
+    .no-forms {
+      text-align: center;
+      color: #666;
+      font-style: italic;
+      padding: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <a href="/dashboard" class="back-link">← Back to Dashboard</a>
+  
+  <h1>Select Form to View Results</h1>
+
+  <% if (forms.length === 0) { %>
+    <div class="no-forms">
+      <p>You have not created any forms yet.</p>
+      <a href="/create-form" class="view-results-btn">Create your first form</a>
+    </div>
+  <% } else { %>
+    <% forms.forEach(form => { %>
+      <div class="form-card">
+        <div class="form-info">
+          <div class="form-title"><%= form.title %></div>
+          <div class="form-date">Created: <%= new Date(form.created_at).toLocaleString('en-US') %></div>
+        </div>
+        <a href="/results/<%= form.id %>" class="view-results-btn">View Results</a>
+      </div>
+    <% }) %>
+  <% } %>
+</body>
+</html>

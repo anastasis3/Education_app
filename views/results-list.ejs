@@ -26,7 +26,7 @@
             <td><%= idx + 1 %></td>
             <td><%= r.user_name %></td>
             <td><%= new Date(r.submitted_at).toLocaleString() %></td>
-            <td><a href="/results/view/<%= r.student_id %>/<%= r.form_id %>">View & Grade</a></td>
+            <td><a href="/results/view/<%= r.form_id %>/<%= r.user_id %>">View & Grade</a></td>
           </tr>
         <% }) %>
       </tbody>
