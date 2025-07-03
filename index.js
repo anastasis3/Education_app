@@ -246,7 +246,7 @@ app.post('/edit-form/:id', async (req, res) => {
       }
     }
 
-    res.redirect('/my-forms');
+     res.redirect('/forms');
   } catch (err) {
     console.error('Error updating form:', err);
     res.status(500).send('Server error');
