@@ -3,6 +3,60 @@
 <head>
   <meta charset="UTF-8" />
   <title>Мои формы</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f9faff;
+      color: #333;
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 2rem;
+    }
+
+    h1 {
+      color: #4b4fcf;
+    }
+
+    a, button {
+      color: #4169e1;
+      text-decoration: none;
+      cursor: pointer;
+      font-weight: 600;
+      border: none;
+      background: none;
+      padding: 0;
+      font-size: 1rem;
+      transition: color 0.3s ease;
+    }
+
+    a:hover, button:hover {
+      color: #5a4fcf;
+    }
+
+    ul {
+      list-style: none;
+      padding-left: 0;
+    }
+
+    li {
+      background: #f0f4ff;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .form-info {
+      flex-grow: 1;
+    }
+
+    .actions {
+      margin-left: 1rem;
+    }
+  </style>
 </head>
 <body>
   <h1>Формы пользователя <%= user.email %></h1>
@@ -14,8 +68,13 @@
     <ul>
       <% forms.forEach(form => { %>
         <li>
-          <strong><%= form.title %></strong>
-          — создана: <%= new Date(form.created_at).toLocaleString('ru-RU') %>
+          <div class="form-info">
+            <strong><%= form.title %></strong>
+            — создана: <%= new Date(form.created_at).toLocaleString('ru-RU') %>
+          </div>
+          <div class="actions">
+            <a href="/edit-form/<%= form.id %>">Редактировать</a>
+          </div>
         </li>
       <% }) %>
     </ul>

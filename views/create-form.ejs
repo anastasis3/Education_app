@@ -1,4 +1,72 @@
-<form action="/create-form" method="POST">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Create Assignment</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f9faff;
+      color: #333;
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 2rem;
+    }
+
+    h1 {
+      color: #4b4fcf;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .question-block {
+      background: #f0f4ff;
+      padding: 1rem;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+
+    label {
+      font-weight: 500;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 0.5rem;
+      margin-top: 0.5rem;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    input[type="checkbox"] {
+      margin-right: 0.5rem;
+    }
+
+    button {
+      padding: 0.75rem;
+      background: linear-gradient(90deg, #7b68ee, #4169e1);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      font-size: 1rem;
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background: #5a4fcf;
+    }
+  </style>
+</head>
+<body>
+  <h1>Create Assignment</h1>
+  <form action="/create-form" method="POST">
   <label for="title">Title:</label>
   <input type="text" id="title" name="title" placeholder="Enter form title" required />
 
@@ -14,3 +82,6 @@
 
   <button type="submit">Save Template</button>
 </form>
+
+</body>
+</html>
