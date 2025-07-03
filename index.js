@@ -311,7 +311,7 @@ app.get('/view-form/:id', async (req, res) => {
     const form = formResult.rows[0];
 
     const questionsResult = await pool.query(
-      'SELECT * FROM questions WHERE form_id = $1 ORDER BY id',
+      'SELECT * FROM questions WHERE form_id = $1 ORDER BY question_order',
       [formId]
     );
 
