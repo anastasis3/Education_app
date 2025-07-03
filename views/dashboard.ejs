@@ -4,49 +4,49 @@
   <meta charset="UTF-8" />
   <title>Dashboard</title>
   <style>
-    /* General styles */
+    /* Clean, professional style */
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #c3cfe2, #ede7f6);
-      color: #1a1a2e;
+      background-color: #f5f7fa; /* very light gray-blue */
+      color: #2c3e50; /* dark slate blue */
       margin: 0;
       padding: 2rem;
       display: flex;
       justify-content: center;
+      min-height: 100vh;
+      align-items: center;
     }
 
     main {
-      max-width: 600px;
+      max-width: 480px;
       width: 100%;
-      background: #f7f9fc;
-      padding: 2rem 3rem;
-      box-shadow: 0 4px 12px rgba(26, 26, 46, 0.1);
+      background: #ffffff; /* white */
+      padding: 2rem 2.5rem;
       border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(44, 62, 80, 0.1); /* subtle shadow */
       text-align: center;
     }
 
     h1 {
       font-weight: 600;
-      font-size: 1.8rem;
+      font-size: 1.7rem;
       margin-bottom: 1.5rem;
-      border-bottom: 2px solid #7c4dff; /* Purple accent */
-      padding-bottom: 0.5rem;
-      color: #2c3e50;
+      color: #34495e; /* slightly lighter dark blue */
     }
 
     h2 {
-      color: #5c6bc0; /* Blue-violet */
+      color: #4a6fa5; /* muted blue */
       font-weight: 600;
       margin-top: 2rem;
       margin-bottom: 1.5rem;
-      font-size: 1.4rem;
+      font-size: 1.3rem;
     }
 
     ul {
       list-style: none;
       padding: 0;
       margin: 0 auto;
-      max-width: 320px; /* limit width for buttons */
+      max-width: 280px; /* limit button container width */
     }
 
     li {
@@ -56,28 +56,29 @@
     a {
       display: block;
       width: 100%;
-      padding: 0.75rem 1rem;
-      background: linear-gradient(90deg, #7c4dff, #536dfe);
-      color: white;
+      padding: 0.7rem 1rem;
+      background: linear-gradient(90deg, #6c7a89, #95a5a6); /* soft blue-gray gradient */
+      color: #ecf0f1; /* light text */
       font-weight: 600;
       font-size: 1rem;
       border-radius: 6px;
       text-decoration: none;
       text-align: center;
-      box-shadow: 0 4px 10px rgba(124, 77, 255, 0.4);
-      transition: background 0.3s ease, box-shadow 0.3s ease;
+      transition: background-color 0.3s ease;
       user-select: none;
+      box-shadow: none; /* no shadow for cleaner look */
+      border: none; /* remove border */
     }
 
     a:hover,
     a:focus {
-      background: linear-gradient(90deg, #536dfe, #7c4dff);
-      box-shadow: 0 6px 14px rgba(83, 109, 254, 0.6);
+      background: #5d6d7e; /* slightly darker solid color on hover */
       outline: none;
+      cursor: pointer;
     }
 
     p {
-      color: #8e24aa; /* Purple */
+      color: #7f8c8d; /* gray text */
       font-weight: 600;
       margin-top: 2rem;
       font-size: 1rem;
