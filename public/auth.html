@@ -69,6 +69,18 @@
         <div id="confirm-error" class="error-message d-none">Passwords do not match.</div>
       </div>
 
+      <!-- Роль учителя - чекбокс -->
+      <div id="role-group" class="mb-3 form-check d-none">
+        <input
+          type="checkbox"
+          class="form-check-input"
+          id="is-teacher"
+          name="role"
+          value="teacher"
+        />
+        <label class="form-check-label" for="is-teacher">Зарегистрироваться как учитель</label>
+      </div>
+
       <button type="submit" class="btn btn-primary w-100" id="submit-btn">Login</button>
 
       <div class="text-center mt-3">
@@ -83,6 +95,7 @@
     const title = document.getElementById("form-title");
     const submitBtn = document.getElementById("submit-btn");
     const confirmGroup = document.getElementById("confirm-group");
+    const roleGroup = document.getElementById("role-group");
     const globalError = document.getElementById("global-error");
 
     let isLogin = true;
@@ -96,6 +109,7 @@
         ? "Don't have an account? Register"
         : "Already have an account? Login";
       confirmGroup.classList.toggle("d-none", isLogin);
+      roleGroup.classList.toggle("d-none", isLogin);
       globalError.classList.add("d-none");
       form.reset();
       clearErrors();
@@ -113,6 +127,7 @@
       const email = form.email.value.trim();
       const password = form.password.value;
       const confirm = form["confirm-password"].value;
+      const isTeacher = form["role"]?.checked; // true или false
 
       let hasError = false;
 
@@ -133,11 +148,18 @@
 
       if (hasError) return;
 
+      // Роль: если checked — "teacher", иначе "student"
+      const role = isTeacher ? "teacher" : "student";
+
       try {
+        const bodyData = isLogin
+          ? { email, password }
+          : { email, password, role };
+
         const res = await fetch(isLogin ? "/login" : "/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify(bodyData),
         });
 
         const data = await res.json();
