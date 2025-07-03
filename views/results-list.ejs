@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Results for <%= form.title %></title>
+</head>
+<body>
+  <h1>Results for <%= form.title %></h1>
+  <a href="/forms">Back to forms list</a><br><br>
+
+  <% if (responses.length === 0) { %>
+    <p>No responses submitted yet.</p>
+  <% } else { %>
+    <table border="1" cellpadding="5" cellspacing="0">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Student</th>
+          <th>Submitted At</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% responses.forEach((r, idx) => { %>
+          <tr>
+            <td><%= idx + 1 %></td>
+            <td><%= r.user_name %></td>
+            <td><%= new Date(r.submitted_at).toLocaleString() %></td>
+            <td><a href="/results/view/<%= r.student_id %>/<%= r.form_id %>">View & Grade</a></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</body>
+</html>

@@ -327,6 +327,152 @@ app.get('/view-form/:id', async (req, res) => {
 });
 
 
+//РЕЗУЛЬТАТЫ
+
+app.get('/results/:formId', async (req, res) => {
+  if (!req.session.user) {
+    return res.status(403).send('Access denied');
+  }
+
+  const formId = req.params.formId;
+  const userId = req.session.user.id;
+
+  try {
+    // Проверяем, что форма принадлежит учителю
+    const formResult = await pool.query(
+      'SELECT * FROM form_templates WHERE id = $1 AND teacher_id = $2',
+      [formId, userId]
+    );
+
+    if (formResult.rowCount === 0) {
+      return res.status(404).send('Form not found or access denied');
+    }
+
+    const form = formResult.rows[0];
+
+    // Получаем список ответов по форме с именами учеников
+    const responsesResult = await pool.query(`
+      SELECT fr.id as response_id, u.id as user_id, u.name as user_name, fr.submitted_at
+      FROM form_responses fr
+      JOIN users u ON fr.user_id = u.id
+      WHERE fr.form_id = $1
+      ORDER BY fr.submitted_at DESC
+    `, [formId]);
+
+    res.render('results-list', {
+      user: req.session.user,
+      form,
+      responses: responsesResult.rows,
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server error');
+  }
+});
+
+
+//ОЦЕНКА КОНКРЕТНОГО ОТВЕТА
+
+app.post('/results/grade', async (req, res) => {
+  if (!req.session.user) {
+    return res.status(403).send('Access denied');
+  }
+
+  const teacherId = req.session.user.id;
+  const { student_id, form_id, grade, comment } = req.body;
+
+  try {
+    // Проверка: форма принадлежит учителю
+    const formCheck = await pool.query(
+      'SELECT id FROM form_templates WHERE id = $1 AND teacher_id = $2',
+      [form_id, teacherId]
+    );
+
+    if (formCheck.rowCount === 0) {
+      return res.status(403).send('Access denied or form not found');
+    }
+
+    // Проверка, есть ли уже оценка от этого учителя для этого ученика и формы
+    const existingGrade = await pool.query(
+      'SELECT id FROM grades WHERE teacher_id = $1 AND student_id = $2 AND form_id = $3',
+      [teacherId, student_id, form_id]
+    );
+
+    if (existingGrade.rowCount > 0) {
+      // Обновляем оценку и комментарий
+      await pool.query(
+        `UPDATE grades SET grade = $1, comment = $2, graded_at = NOW() WHERE id = $3`,
+        [grade, comment, existingGrade.rows[0].id]
+      );
+    } else {
+      // Вставляем новую оценку
+      await pool.query(
+        `INSERT INTO grades (teacher_id, student_id, form_id, grade, comment) VALUES ($1, $2, $3, $4, $5)`,
+        [teacherId, student_id, form_id, grade, comment]
+      );
+    }
+
+    res.redirect(`/results/view/${form_id}/${student_id}`);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server error');
+  }
+});
+
+
+//ПРОСМОТР
+app.get('/results/view/:formId/:studentId', async (req, res) => {
+  if (!req.session.user) {
+    return res.status(403).send('Access denied');
+  }
+
+  const teacherId = req.session.user.id;
+  const { formId, studentId } = req.params;
+
+  try {
+    // Проверяем, что форма принадлежит учителю
+    const formCheck = await pool.query(
+      'SELECT * FROM form_templates WHERE id = $1 AND teacher_id = $2',
+      [formId, teacherId]
+    );
+
+    if (formCheck.rowCount === 0) {
+      return res.status(403).send('Access denied or form not found');
+    }
+
+    // Получаем ответы ученика по этой форме
+    const answersResult = await pool.query(
+      `SELECT q.question_text, a.answer_text, a.file_url
+       FROM answers a
+       JOIN questions q ON a.question_id = q.id
+       WHERE a.form_id = $1 AND a.student_id = $2
+       ORDER BY q.question_order`,
+      [formId, studentId]
+    );
+
+    // Получаем оценку и комментарий, если есть
+    const gradeResult = await pool.query(
+      `SELECT grade, comment FROM grades
+       WHERE teacher_id = $1 AND student_id = $2 AND form_id = $3`,
+      [teacherId, studentId, formId]
+    );
+
+    res.render('results-view', {
+      form: formCheck.rows[0],
+      studentId,
+      answers: answersResult.rows,
+      grade: gradeResult.rows[0] || null,
+      user: req.session.user,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server error');
+  }
+});
+
+
+
 // Запуск сервера
 app.listen(port, () => {
   console.log(`🚀 Сервер запущен на порту ${port}`);

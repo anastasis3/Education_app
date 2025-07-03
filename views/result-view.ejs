@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Results for <%= form.title %> - Student <%= studentId %></title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 2rem;
+      background: #f9faff;
+      color: #333;
+    }
+    h1 {
+      color: #4b4fcf;
+    }
+    .answer {
+      background: #f0f4ff;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    label {
+      font-weight: 600;
+      display: block;
+      margin-top: 1rem;
+    }
+    input[type="number"], textarea {
+      width: 100%;
+      padding: 0.5rem;
+      margin-top: 0.5rem;
+      font-size: 1rem;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      resize: vertical;
+    }
+    button {
+      margin-top: 1rem;
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      color: white;
+      background-color: #4b4fcf;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #3a3fc0;
+    }
+    a {
+      color: #4169e1;
+      text-decoration: none;
+      font-weight: 600;
+      display: inline-block;
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <a href="/results">← Back to results list</a>
+  <h1>Results for: <%= form.title %></h1>
+  <h3>Student ID: <%= studentId %></h3>
+
+  <% if (answers.length === 0) { %>
+    <p>No answers submitted by this student.</p>
+  <% } else { %>
+    <% answers.forEach((ans, idx) => { %>
+      <div class="answer">
+        <strong>Q<%= idx + 1 %>:</strong> <%= ans.question_text %><br />
+        <em>Answer:</em> <%= ans.answer_text || 'No text answer' %>
+        <% if (ans.file_url) { %>
+          <br /><a href="<%= ans.file_url %>" target="_blank">File attachment</a>
+        <% } %>
+      </div>
+    <% }) %>
+  <% } %>
+
+  <form action="/results/grade" method="POST">
+    <input type="hidden" name="student_id" value="<%= studentId %>">
+    <input type="hidden" name="form_id" value="<%= form.id %>">
+
+    <label for="grade">Grade (0-100):</label>
+    <input type="number" id="grade" name="grade" min="0" max="100" step="0.01" value="<%= grade ? grade.grade : '' %>" required>
+
+    <label for="comment">Comment:</label>
+    <textarea id="comment" name="comment" rows="4"><%= grade ? grade.comment : '' %></textarea>
+
+    <button type="submit">Save Grade</button>
+  </form>
+</body>
+</html>
