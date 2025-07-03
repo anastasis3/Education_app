@@ -289,6 +289,42 @@ app.post('/delete-form/:id', async (req, res) => {
 });
 
 
+//ПРОСМОТР ФОРМЫ
+app.get('/view-form/:id', async (req, res) => {
+  if (!req.session.user) {
+    return res.status(403).send('Access denied');
+  }
+
+  const formId = req.params.id;
+  const userId = req.session.user.id;
+
+  try {
+    const formResult = await pool.query(
+      'SELECT * FROM form_templates WHERE id = $1 AND teacher_id = $2',
+      [formId, userId]
+    );
+
+    if (formResult.rowCount === 0) {
+      return res.status(404).send('Form not found or access denied');
+    }
+
+    const form = formResult.rows[0];
+
+    const questionsResult = await pool.query(
+      'SELECT * FROM questions WHERE form_id = $1 ORDER BY id',
+      [formId]
+    );
+
+    res.render('view-form', {
+      user: req.session.user,
+      form,
+      questions: questionsResult.rows,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server error');
+  }
+});
 
 
 // Запуск сервера

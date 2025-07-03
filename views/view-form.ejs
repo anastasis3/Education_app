@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title><%= form.title %> - View Form</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f9faff;
+      color: #333;
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 2rem;
+    }
+    h1 {
+      color: #4b4fcf;
+    }
+    .question {
+      background: #f0f4ff;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <h1><%= form.title %></h1>
+  <a href="/my-forms">Back to forms list</a><br><br>
+
+  <% if (questions.length === 0) { %>
+    <p>No questions in this form yet.</p>
+  <% } else { %>
+    <% questions.forEach((q, idx) => { %>
+      <div class="question">
+        <strong>Question <%= idx + 1 %>:</strong> <%= q.text %> <% if (!q.active) { %> (Inactive) <% } %>
+      </div>
+    <% }) %>
+  <% } %>
+</body>
+</html>

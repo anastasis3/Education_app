@@ -47,10 +47,17 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      transition: background-color 0.3s ease;
+    }
+
+    /* Hover затемнение всей карточки формы */
+    li:hover {
+      background-color: #d9e0ff;
     }
 
     .form-info {
       flex-grow: 1;
+      cursor: pointer;
     }
 
     .actions {
@@ -71,6 +78,24 @@
     .delete-btn:hover {
       color: #b52b27;
     }
+
+    /* Градиентная кнопка "Create new form" */
+    .create-new-form {
+      display: inline-block;
+      padding: 0.75rem 1.5rem;
+      background: linear-gradient(90deg, #4169e1, #7b68ee);
+      color: white !important;
+      font-weight: bold;
+      font-size: 1.1rem;
+      border-radius: 6px;
+      text-decoration: none;
+      transition: background 0.3s ease;
+      margin-top: 1rem;
+    }
+
+    .create-new-form:hover {
+      background: linear-gradient(90deg, #5a4fcf, #9a81f7);
+    }
   </style>
 </head>
 <body>
@@ -83,9 +108,9 @@
     <ul>
       <% forms.forEach(form => { %>
         <li>
-          <div class="form-info">
+          <a href="/view-form/<%= form.id %>" class="form-info" title="View form details">
             <strong><%= form.title %></strong> — created: <%= new Date(form.created_at).toLocaleString('en-US') %>
-          </div>
+          </a>
           <div class="actions">
             <a href="/edit-form/<%= form.id %>">Edit</a>
             <form action="/delete-form/<%= form.id %>" method="POST" style="display:inline;">
@@ -99,7 +124,6 @@
     </ul>
   <% } %>
 
-  <br>
-  <a href="/create-form">Create new form</a>
+  <a href="/create-form" class="create-new-form">Create new form</a>
 </body>
 </html>
