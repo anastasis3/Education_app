@@ -352,7 +352,7 @@ app.get('/results/:formId', async (req, res) => {
 
     // Получаем список ответов по форме с именами учеников
     const responsesResult = await pool.query(`
-      SELECT fr.id as response_id, u.id as user_id, u.name as user_name, fr.submitted_at
+      SELECT fr.id as response_id, u.id as user_id, u.name as user_name, fr.submitted_at, fr.form_id
       FROM form_responses fr
       JOIN users u ON fr.user_id = u.id
       WHERE fr.form_id = $1
@@ -370,6 +370,7 @@ app.get('/results/:formId', async (req, res) => {
     res.status(500).send('Server error');
   }
 });
+
 
 
 //ОЦЕНКА КОНКРЕТНОГО ОТВЕТА
