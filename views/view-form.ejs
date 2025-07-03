@@ -39,14 +39,15 @@
   <h1><%= form.title %></h1>
   <a href="/forms">Back to forms list</a><br><br>
 
-  <% if (questions.length === 0) { %>
-    <p>No questions in this form yet.</p>
-  <% } else { %>
-    <% questions.forEach((q, idx) => { %>
-      <div class="question">
-        <strong>Question <%= idx + 1 %>:</strong> <%= q.text %> <% if (q.active === false) { %> (Inactive) <% } %>
-      </div>
-    <% }) %>
-  <% } %>
+<% if (questions.length === 0) { %>
+  <p>No questions in this form yet.</p>
+<% } else { %>
+  <% questions.forEach((q, idx) => { %>
+    <div class="question">
+      <strong>Question <%= idx + 1 %>:</strong> <%= q.text %> <% if (!q.is_active) { %> (Inactive) <% } %>
+    </div>
+  <% }) %>
+<% } %>
+
 </body>
 </html>
