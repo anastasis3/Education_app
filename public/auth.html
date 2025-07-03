@@ -10,31 +10,84 @@
   />
   <style>
     body {
-      background-color: #f8f9fa;
+      background-color: #f5f7fa; /* из первого примера */
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #2c3e50;
     }
+
     .auth-box {
       max-width: 420px;
       margin: 80px auto;
-      padding: 30px;
-      background-color: white;
-      border: 1px solid #dee2e6;
+      padding: 30px 40px;
+      background-color: #ffffff;
       border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(44, 62, 80, 0.1);
+      text-align: center;
     }
+
+    h4 {
+      font-weight: 600;
+      font-size: 1.7rem;
+      margin-bottom: 1.5rem;
+      color: #34495e;
+    }
+
     .error-message {
       color: #dc3545;
       font-size: 0.875rem;
       margin-top: 5px;
     }
+
+    /* Кнопка в стиле первого примера */
+    button#submit-btn {
+      width: 100%;
+      padding: 0.7rem 1rem;
+      background: linear-gradient(90deg, #7b68ee, #4169e1);
+      color: #ecf0f1;
+      font-weight: 600;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: none;
+      box-shadow: none;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.3s ease;
+    }
+
+    button#submit-btn:hover,
+    button#submit-btn:focus {
+      background: linear-gradient(90deg, #4169e1, #7b68ee);
+      outline: none;
+    }
+
+    /* Ссылка переключения формы */
+    #toggle-form {
+      color: #4169e1;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      display: inline-block;
+      margin-top: 1rem;
+      transition: color 0.3s ease;
+      user-select: none;
+    }
+
+    #toggle-form:hover,
+    #toggle-form:focus {
+      color: #7b68ee;
+      text-decoration: underline;
+      outline: none;
+    }
   </style>
 </head>
 <body>
   <div class="auth-box shadow-sm">
-    <h4 class="mb-4 text-center" id="form-title">Login</h4>
+    <h4 class="mb-4" id="form-title">Login</h4>
 
     <form id="auth-form" novalidate>
       <div id="global-error" class="alert alert-danger d-none" role="alert"></div>
 
-      <div class="mb-3">
+      <div class="mb-3 text-start">
         <label for="email" class="form-label">Email address</label>
         <input
           type="email"
@@ -46,7 +99,7 @@
         <div id="email-error" class="error-message d-none">Please enter a valid email.</div>
       </div>
 
-      <div class="mb-3">
+      <div class="mb-3 text-start">
         <label for="password" class="form-label">Password</label>
         <input
           type="password"
@@ -58,7 +111,7 @@
         <div id="password-error" class="error-message d-none">Password is required.</div>
       </div>
 
-      <div id="confirm-group" class="mb-3 d-none">
+      <div id="confirm-group" class="mb-3 d-none text-start">
         <label for="confirm-password" class="form-label">Confirm Password</label>
         <input
           type="password"
@@ -69,8 +122,7 @@
         <div id="confirm-error" class="error-message d-none">Passwords do not match.</div>
       </div>
 
-      <!-- Роль учителя - чекбокс -->
-      <div id="role-group" class="mb-3 form-check d-none">
+      <div id="role-group" class="mb-3 form-check d-none text-start">
         <input
           type="checkbox"
           class="form-check-input"
@@ -81,9 +133,9 @@
         <label class="form-check-label" for="is-teacher">Зарегистрироваться как учитель</label>
       </div>
 
-      <button type="submit" class="btn btn-primary w-100" id="submit-btn">Login</button>
+      <button type="submit" id="submit-btn">Login</button>
 
-      <div class="text-center mt-3">
+      <div class="text-center">
         <a href="#" id="toggle-form">Don't have an account? Register</a>
       </div>
     </form>
@@ -127,7 +179,7 @@
       const email = form.email.value.trim();
       const password = form.password.value;
       const confirm = form["confirm-password"].value;
-      const isTeacher = form["role"]?.checked; // true или false
+      const isTeacher = form["role"]?.checked;
 
       let hasError = false;
 
@@ -148,7 +200,6 @@
 
       if (hasError) return;
 
-      // Роль: если checked — "teacher", иначе "student"
       const role = isTeacher ? "teacher" : "student";
 
       try {
