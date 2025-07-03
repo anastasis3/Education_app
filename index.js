@@ -165,6 +165,132 @@ app.get('/forms', async (req, res) => {
 
 
 
+app.get('/edit-form/:id', async (req, res) => {
+  if (!req.session.user || req.session.user.role !== 'teacher') {
+    return res.status(403).send('Access denied. Teachers only.');
+  }
+
+  const formId = req.params.id;
+  const userId = req.session.user.id;
+
+  try {
+    const formResult = await pool.query(
+      'SELECT * FROM form_templates WHERE id = $1 AND teacher_id = $2',
+      [formId, userId]
+    );
+
+    if (formResult.rowCount === 0) {
+      return res.status(404).send('Form not found or access denied');
+    }
+
+    const form = formResult.rows[0];
+
+    const questionsResult = await pool.query(
+      'SELECT * FROM questions WHERE form_id = $1 ORDER BY question_order',
+      [formId]
+    );
+
+    res.render('edit-form', {
+      form,
+      questions: questionsResult.rows
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server error');
+  }
+});
+
+
+
+//ОБНОВЛЕНИЕ ФОРМЫ
+app.post('/edit-form/:id', async (req, res) => {
+  if (!req.session.user || req.session.user.role !== 'teacher') {
+    return res.status(403).send('Access denied. Teachers only.');
+  }
+
+  const formId = req.params.id;
+  const userId = req.session.user.id;
+  const { title } = req.body;
+
+  try {
+    // Проверяем принадлежность формы пользователю
+    const formCheck = await pool.query(
+      'SELECT * FROM form_templates WHERE id = $1 AND teacher_id = $2',
+      [formId, userId]
+    );
+
+    if (formCheck.rowCount === 0) {
+      return res.status(404).send('Form not found or access denied');
+    }
+
+    // Обновляем заголовок
+    await pool.query(
+      'UPDATE form_templates SET title = $1 WHERE id = $2',
+      [title, formId]
+    );
+
+    // Удаляем старые вопросы, чтобы заменить на новые
+    await pool.query('DELETE FROM questions WHERE form_id = $1', [formId]);
+
+    // Вставляем вопросы заново
+    for (let i = 1; i <= 4; i++) {
+      const isActive = req.body[`active_${i}`] === 'on';
+      const questionText = req.body[`question_${i}`]?.trim();
+
+      if (questionText) {
+        await pool.query(
+          `INSERT INTO questions (form_id, question_text, is_active, question_order)
+           VALUES ($1, $2, $3, $4)`,
+          [formId, questionText, isActive, i]
+        );
+      }
+    }
+
+    res.redirect('/my-forms');
+  } catch (err) {
+    console.error('Error updating form:', err);
+    res.status(500).send('Server error');
+  }
+});
+
+
+//УДАЛЕНИЕ ФОРМЫ
+//УДАЛЕНИЕ ФОРМЫ
+app.post('/delete-form/:id', async (req, res) => {
+  if (!req.session.user || req.session.user.role !== 'teacher') {
+    return res.status(403).send('Access denied. Teachers only.');
+  }
+
+  const formId = req.params.id;
+  const userId = req.session.user.id;
+
+  try {
+    // Проверяем, что форма принадлежит текущему учителю
+    const formCheck = await pool.query(
+      'SELECT * FROM form_templates WHERE id = $1 AND teacher_id = $2',
+      [formId, userId]
+    );
+
+    if (formCheck.rowCount === 0) {
+      return res.status(404).send('Form not found or access denied');
+    }
+
+    // Удаляем связанные вопросы
+    await pool.query('DELETE FROM questions WHERE form_id = $1', [formId]);
+
+    // Удаляем саму форму
+    await pool.query('DELETE FROM form_templates WHERE id = $1', [formId]);
+
+    res.redirect('/forms');
+  } catch (err) {
+    console.error('Error deleting form:', err);
+    res.status(500).send('Server error');
+  }
+});
+
+
+
+
 // Запуск сервера
 app.listen(port, () => {
   console.log(`🚀 Сервер запущен на порту ${port}`);

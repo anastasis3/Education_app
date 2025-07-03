@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Мои формы</title>
+  <title>User Forms</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -54,26 +54,45 @@
     }
 
     .actions {
-      margin-left: 1rem;
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .delete-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #d9534f;
+      font-size: 1.2rem;
+      transition: color 0.3s ease;
+    }
+
+    .delete-btn:hover {
+      color: #b52b27;
     }
   </style>
 </head>
 <body>
-  <h1>Формы пользователя <%= user.email %></h1>
-  <a href="/dashboard">Назад на панель</a><br><br>
+  <h1>User Forms for <%= user.email %></h1>
+  <a href="/dashboard">Back to dashboard</a><br><br>
 
   <% if (forms.length === 0) { %>
-    <p>Вы ещё не создали ни одной формы.</p>
+    <p>You have not created any forms yet.</p>
   <% } else { %>
     <ul>
       <% forms.forEach(form => { %>
         <li>
           <div class="form-info">
-            <strong><%= form.title %></strong>
-            — создана: <%= new Date(form.created_at).toLocaleString('ru-RU') %>
+            <strong><%= form.title %></strong> — created: <%= new Date(form.created_at).toLocaleString('en-US') %>
           </div>
           <div class="actions">
-            <a href="/edit-form/<%= form.id %>">Редактировать</a>
+            <a href="/edit-form/<%= form.id %>">Edit</a>
+            <form action="/delete-form/<%= form.id %>" method="POST" style="display:inline;">
+              <button class="delete-btn" type="submit" title="Delete form" onclick="return confirm('Are you sure you want to delete this form?');">
+                🗑️
+              </button>
+            </form>
           </div>
         </li>
       <% }) %>
@@ -81,6 +100,6 @@
   <% } %>
 
   <br>
-  <a href="/create-form">Создать новую форму</a>
+  <a href="/create-form">Create new form</a>
 </body>
 </html>
