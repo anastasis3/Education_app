@@ -100,3 +100,42 @@ app.get('/dashboard', (req, res) => {
 app.listen(port, () => {
   console.log(`🚀 Сервер запущен на порту ${port}`);
 });
+
+
+app.post('/create-form', async (req, res) => {
+  if (!req.session.user || req.session.user.role !== 'teacher') {
+    return res.status(403).send('Unauthorized');
+  }
+
+  const { title } = req.body;
+  const teacherId = req.session.user.id;
+
+  try {
+    // 1. Сохраняем шаблон формы
+    const formResult = await pool.query(
+      'INSERT INTO form_templates (teacher_id, title) VALUES ($1, $2) RETURNING id',
+      [teacherId, title]
+    );
+    const formId = formResult.rows[0].id;
+
+    // 2. Обрабатываем вопросы
+    for (let i = 1; i <= 4; i++) {
+      const isActive = req.body[`active_${i}`] === 'on';
+      const questionText = req.body[`question_${i}`]?.trim();
+
+      // Сохраняем только если текст вопроса не пустой
+      if (questionText) {
+        await pool.query(
+          `INSERT INTO questions (form_id, question_text, is_active, question_order)
+           VALUES ($1, $2, $3, $4)`,
+          [formId, questionText, isActive, i]
+        );
+      }
+    }
+
+    res.send('Форма успешно создана!');
+  } catch (err) {
+    console.error('Ошибка при создании формы:', err);
+    res.status(500).send('Ошибка сервера');
+  }
+});
