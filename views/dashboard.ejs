@@ -87,36 +87,24 @@
 </head>
 <body>
   <main>
-  <h1>Welcome, <%= user.email %>!</h1>
+    <h1>Welcome, <%= user.email %>!</h1>
 
-  <% if (user.role === 'teacher') { %>
-    <h2>Teacher Dashboard</h2>
-
-    <% if (forms.length === 0) { %>
-      <p>You have no forms created yet.</p>
-      <a href="/create-form">Create Assignment</a>
-    <% } else { %>
+    <% if (user.role === 'teacher') { %>
+      <h2>Teacher Dashboard</h2>
       <ul>
-        <% forms.forEach(form => { %>
-          <li style="margin-bottom: 1rem;">
-            <strong><%= form.title %></strong>
-            <a href="/results/<%= form.id %>" style="margin-left: 10px;">View Results</a>
-          </li>
-        <% }) %>
+        <li><a href="/forms">List of Created Forms</a></li>
+        <li><a href="/create-form">Create Assignment</a></li>
+        <li><a href="/forms">View Results</a></li>
       </ul>
-      <a href="/create-form">Create Assignment</a>
+    <% } else if (user.role === 'student') { %>
+      <h2>Student Form</h2>
+      <ul>
+        <li><a href="/active-form">Fill Active Assignment</a></li>
+        <li><a href="/grades">View Grades</a></li>
+      </ul>
+    <% } else { %>
+      <p>Unsupported role</p>
     <% } %>
-
-  <% } else if (user.role === 'student') { %>
-    <h2>Student Form</h2>
-    <ul>
-      <li><a href="/active-form">Fill Active Assignment</a></li>
-      <li><a href="/grades">View Grades</a></li>
-    </ul>
-  <% } else { %>
-    <p>Unsupported role</p>
-  <% } %>
-</main>
-
+  </main>
 </body>
 </html>
