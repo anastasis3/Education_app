@@ -8,7 +8,7 @@ const bcrypt = require('bcrypt');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Подключение к базе
+// Подключение к базе данных
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false },
@@ -26,22 +26,23 @@ app.use(session({
   cookie: { maxAge: 7 * 24 * 60 * 60 * 1000 } // 1 неделя
 }));
 
-// Шаблонизатор ejs
+// Настройка EJS
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
 // Статические файлы
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Роуты
+// ==================== Роуты ==================== //
 
+// Главная страница (авторизация)
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'auth.html'));
 });
 
+// Регистрация
 app.post('/register', async (req, res) => {
-  const { email, password, role } = req.body; // Добавим роль при регистрации (teacher/student)
-  
+  const { email, password, role } = req.body;
   if (!email || !password || !role) {
     return res.status(400).json({ error: 'Email, пароль и роль обязательны' });
   }
@@ -63,6 +64,7 @@ app.post('/register', async (req, res) => {
   }
 });
 
+// Вход
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email и пароль обязательны' });
@@ -79,9 +81,7 @@ app.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Неверный email или пароль' });
     }
 
-    // Сохраняем пользователя в сессии (не пароль!)
     req.session.user = { id: user.id, email: user.email, role: user.role };
-
     res.status(200).json({ message: 'Успешный вход' });
   } catch (error) {
     console.error('Ошибка входа:', error);
@@ -89,6 +89,7 @@ app.post('/login', async (req, res) => {
   }
 });
 
+// Панель пользователя
 app.get('/dashboard', (req, res) => {
   if (!req.session.user) {
     return res.status(403).send('Доступ запрещён. Пожалуйста, войдите в систему.');
@@ -96,12 +97,15 @@ app.get('/dashboard', (req, res) => {
   res.render('dashboard', { user: req.session.user });
 });
 
-// Запуск сервера
-app.listen(port, () => {
-  console.log(`🚀 Сервер запущен на порту ${port}`);
+// 👉 ДОБАВЛЯЕМ ВАЖНЫЙ РОУТ — форма создания
+app.get('/create-form', (req, res) => {
+  if (!req.session.user || req.session.user.role !== 'teacher') {
+    return res.status(403).send('Доступ запрещён. Только для учителей.');
+  }
+  res.render('create-form'); // views/create-form.ejs
 });
 
-
+// Обработка создания формы (POST)
 app.post('/create-form', async (req, res) => {
   if (!req.session.user || req.session.user.role !== 'teacher') {
     return res.status(403).send('Unauthorized');
@@ -111,19 +115,16 @@ app.post('/create-form', async (req, res) => {
   const teacherId = req.session.user.id;
 
   try {
-    // 1. Сохраняем шаблон формы
     const formResult = await pool.query(
       'INSERT INTO form_templates (teacher_id, title) VALUES ($1, $2) RETURNING id',
       [teacherId, title]
     );
     const formId = formResult.rows[0].id;
 
-    // 2. Обрабатываем вопросы
     for (let i = 1; i <= 4; i++) {
       const isActive = req.body[`active_${i}`] === 'on';
       const questionText = req.body[`question_${i}`]?.trim();
 
-      // Сохраняем только если текст вопроса не пустой
       if (questionText) {
         await pool.query(
           `INSERT INTO questions (form_id, question_text, is_active, question_order)
@@ -138,4 +139,9 @@ app.post('/create-form', async (req, res) => {
     console.error('Ошибка при создании формы:', err);
     res.status(500).send('Ошибка сервера');
   }
+});
+
+// Запуск сервера
+app.listen(port, () => {
+  console.log(`🚀 Сервер запущен на порту ${port}`);
 });
