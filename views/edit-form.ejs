@@ -99,9 +99,12 @@
         </select>
 
         <div id="options_<%= i + 1 %>" class="options-container" style="display:<%= question.question_type === 'radio' || question.question_type === 'checkbox' || question.question_type === 'dropdown' ? 'block' : 'none' %>;">
-          <% question.options.forEach((option, j) => { %>
-            <input type="text" name="option_<%= i + 1 %>_<%= j + 1 %>" value="<%= option %>" />
-          <% }); %>
+            <% if (question.options && Array.isArray(question.options)) { %>
+            <% question.options.forEach((option, j) => { %>
+                <input type="text" name="option_<%= i + 1 %>_<%= j + 1 %>" value="<%= option %>" />
+            <% }); %>
+            <% } %>
+
         </div>
 
         <label for="correct_answer_<%= i + 1 %>">Correct Answer:</label>
