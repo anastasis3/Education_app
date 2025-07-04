@@ -504,14 +504,22 @@ app.get('/view-form/:id', async (req, res) => {
     const responseCount = parseInt(responseCountResult.rows[0].count);
     const averageGrade = averageGradeResult.rows[0].average_grade;
 
-    // Render the updated template
+    // Render the updated template with all required variables
     res.render('view-form', {
       form,
       questions: questionsResult.rows,
-      assignedStudents: assignedStudentsResult.rows,
+      assignedStudents: assignedStudentsResult.rows || [],
       responseCount,
       averageGrade: averageGrade ? parseFloat(averageGrade) : null,
-      user: req.session.user
+      user: req.session.user,
+      // Add any missing variables that might be referenced in the template
+      studentName: req.session.user.name || req.session.user.email || 'Unknown',
+      studentEmail: req.session.user.email,
+      studentId: userId,
+      answers: [],
+      grade: null,
+      totalQuestions: questionsResult.rows.length,
+      submissionDate: null
     });
 
   } catch (err) {
@@ -631,8 +639,6 @@ app.get('/form-analytics/:id', async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
-
-
 // Роут для выбора формы для просмотра результатов
 app.get('/select-form-results', async (req, res) => {
   if (!req.session.user || req.session.user.role !== 'teacher') {

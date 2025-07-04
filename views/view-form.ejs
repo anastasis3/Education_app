@@ -255,15 +255,15 @@
   
   <div class="stats-grid">
     <div class="stat-card">
-      <div class="stat-number"><%= questions.length %></div>
+      <div class="stat-number"><%= questions && questions.length || 0 %></div>
       <div class="stat-label">Total Questions</div>
     </div>
     <div class="stat-card">
-      <div class="stat-number"><%= assignedStudents.length %></div>
+      <div class="stat-number"><%= assignedStudents && assignedStudents.length || 0 %></div>
       <div class="stat-label">Assigned Students</div>
     </div>
     <div class="stat-card">
-      <div class="stat-number"><%= responseCount %></div>
+      <div class="stat-number"><%= responseCount || 0 %></div>
       <div class="stat-label">Responses Received</div>
     </div>
     <div class="stat-card">
@@ -274,9 +274,9 @@
   
   <div class="content-grid">
     <div class="questions-section">
-      <h2 class="section-title">Questions (<%= questions.length %>)</h2>
+      <h2 class="section-title">Questions (<%= questions && questions.length || 0 %>)</h2>
       
-      <% if (questions.length === 0) { %>
+      <% if (!questions || questions.length === 0) { %>
         <div class="no-content">
           <h3>No questions added yet.</h3>
           <p>This form doesn't have any questions. You can add questions by editing the form.</p>
@@ -314,9 +314,9 @@
     </div>
     
     <div class="students-section">
-      <h2 class="section-title">Assigned Students (<%= assignedStudents.length %>)</h2>
+      <h2 class="section-title">Assigned Students (<%= assignedStudents && assignedStudents.length || 0 %>)</h2>
       
-      <% if (assignedStudents.length === 0) { %>
+      <% if (!assignedStudents || assignedStudents.length === 0) { %>
         <div class="no-content">
           <h3>No students assigned</h3>
           <p>This form hasn't been assigned to any students yet.</p>
