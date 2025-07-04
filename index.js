@@ -552,6 +552,156 @@ app.get('/select-form-results', async (req, res) => {
 });
 
 
+
+
+// Add this route handler to your Express.js application
+// Place it with your other route handlers
+
+// Route to show active forms assigned to the student
+app.get('/active-form', async (req, res) => {
+  if (!req.session.user || req.session.user.role !== 'student') {
+    return res.status(403).send('Доступ запрещён. Только для студентов.');
+  }
+
+  const studentId = req.session.user.id;
+
+  try {
+    // Get all forms assigned to this student that haven't been submitted yet
+    const assignedFormsResult = await pool.query(`
+      SELECT DISTINCT ft.id, ft.title, ft.created_at 
+      FROM form_templates ft
+      JOIN form_assignments fa ON ft.id = fa.form_id
+      WHERE fa.user_id = $1 
+      AND NOT EXISTS (
+        SELECT 1 FROM form_responses fr 
+        WHERE fr.form_id = ft.id AND fr.user_id = $1
+      )
+      ORDER BY ft.created_at DESC
+    `, [studentId]);
+
+    if (assignedFormsResult.rows.length === 0) {
+      return res.render('active-form', { 
+        forms: [], 
+        user: req.session.user,
+        message: 'У вас нет активных заданий для заполнения.' 
+      });
+    }
+
+    // Get detailed information for each form including questions and options
+    const formsWithDetails = [];
+    
+    for (const form of assignedFormsResult.rows) {
+      // Get questions for this form
+      const questionsResult = await pool.query(`
+        SELECT q.id, q.question_text, q.question_type, q.question_order
+        FROM questions q
+        WHERE q.form_id = $1 AND q.is_active = true
+        ORDER BY q.question_order
+      `, [form.id]);
+
+      // Get options for each question
+      const questionsWithOptions = [];
+      for (const question of questionsResult.rows) {
+        const optionsResult = await pool.query(`
+          SELECT option_text 
+          FROM options 
+          WHERE question_id = $1 
+          ORDER BY id
+        `, [question.id]);
+
+        questionsWithOptions.push({
+          ...question,
+          options: optionsResult.rows.map(opt => opt.option_text)
+        });
+      }
+
+      formsWithDetails.push({
+        ...form,
+        questions: questionsWithOptions
+      });
+    }
+
+    res.render('active-form', { 
+      forms: formsWithDetails, 
+      user: req.session.user,
+      message: null 
+    });
+
+  } catch (err) {
+    console.error('Ошибка при получении активных форм:', err);
+    res.status(500).send('Ошибка сервера');
+  }
+});
+
+// Route to handle form submission
+app.post('/submit-answer/:formId', async (req, res) => {
+  if (!req.session.user || req.session.user.role !== 'student') {
+    return res.status(403).send('Доступ запрещён. Только для студентов.');
+  }
+
+  const formId = req.params.formId;
+  const studentId = req.session.user.id;
+
+  try {
+    // Check if student is assigned to this form
+    const assignmentCheck = await pool.query(
+      'SELECT 1 FROM form_assignments WHERE form_id = $1 AND user_id = $2',
+      [formId, studentId]
+    );
+
+    if (assignmentCheck.rowCount === 0) {
+      return res.status(403).send('Вы не назначены на эту форму.');
+    }
+
+    // Check if student has already submitted this form
+    const submissionCheck = await pool.query(
+      'SELECT 1 FROM form_responses WHERE form_id = $1 AND user_id = $2',
+      [formId, studentId]
+    );
+
+    if (submissionCheck.rowCount > 0) {
+      return res.status(400).send('Вы уже отправили ответы на эту форму.');
+    }
+
+    // Create form response record
+    const responseResult = await pool.query(
+      'INSERT INTO form_responses (form_id, user_id) VALUES ($1, $2) RETURNING id',
+      [formId, studentId]
+    );
+    const responseId = responseResult.rows[0].id;
+
+    // Get questions for this form
+    const questionsResult = await pool.query(
+      'SELECT id, question_order FROM questions WHERE form_id = $1 AND is_active = true ORDER BY question_order',
+      [formId]
+    );
+
+    // Save answers
+    for (const question of questionsResult.rows) {
+      const answerKey = `answer_${question.question_order - 1}`; // Adjust for 0-based indexing
+      let answerValue = req.body[answerKey];
+
+      if (answerValue) {
+        // Handle checkbox answers (arrays)
+        if (Array.isArray(answerValue)) {
+          answerValue = answerValue.join(', ');
+        }
+
+        await pool.query(
+          'INSERT INTO answer_responses (response_id, question_id, answer_text) VALUES ($1, $2, $3)',
+          [responseId, question.id, answerValue]
+        );
+      }
+    }
+
+    res.redirect('/dashboard?message=Форма успешно отправлена!');
+
+  } catch (err) {
+    console.error('Ошибка при отправке формы:', err);
+    res.status(500).send('Ошибка сервера');
+  }
+});
+
 // Запуск сервера
 app.listen(port, () => {
   console.log(`🚀 Сервер запущен на порту ${port}`);

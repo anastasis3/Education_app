@@ -3,41 +3,209 @@
 <head>
   <meta charset="UTF-8" />
   <title>Active Forms</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f5f7fa;
+      color: #2c3e50; 
+      margin: 0;
+      padding: 2rem;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #ffffff; 
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(44, 62, 80, 0.1); 
+    }
+
+    h1 {
+      font-weight: 600;
+      font-size: 1.8rem;
+      margin-bottom: 1.5rem;
+      color: #34495e; 
+      text-align: center;
+    }
+
+    h2 {
+      color: #4a6fa5; 
+      font-weight: 600;
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+      font-size: 1.4rem;
+      border-bottom: 2px solid #4a6fa5;
+      padding-bottom: 0.5rem;
+    }
+
+    .form-container {
+      background: #f8f9fa;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      border-radius: 6px;
+      border-left: 4px solid #4a6fa5;
+    }
+
+    .question-block {
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: #ffffff;
+      border-radius: 4px;
+      border: 1px solid #e1e8ed;
+    }
+
+    .question-block p {
+      font-weight: 600;
+      margin-bottom: 0.8rem;
+      color: #2c3e50;
+    }
+
+    input[type="text"], 
+    input[type="file"], 
+    select, 
+    textarea {
+      width: 100%;
+      padding: 0.6rem;
+      border: 1px solid #bdc3c7;
+      border-radius: 4px;
+      font-size: 1rem;
+      font-family: inherit;
+      box-sizing: border-box;
+    }
+
+    input[type="radio"], 
+    input[type="checkbox"] {
+      margin-right: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .option-group {
+      margin-bottom: 0.5rem;
+    }
+
+    .option-group label {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      padding: 0.3rem 0;
+    }
+
+    button {
+      background: linear-gradient(90deg, #7b68ee, #4169e1);
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 0.8rem 2rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+      display: block;
+      margin: 2rem auto 0;
+    }
+
+    button:hover {
+      background: linear-gradient(90deg, #4169e1, #7b68ee);
+    }
+
+    .message {
+      text-align: center;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    .info-message {
+      background: #e8f4fd;
+      color: #1e88e5;
+      border: 1px solid #bbdefb;
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-bottom: 1rem;
+      padding: 0.5rem 1rem;
+      background: #6c757d;
+      color: #ffffff;
+      text-decoration: none;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    .back-link:hover {
+      background: #5a6268;
+    }
+  </style>
 </head>
 <body>
-  <h1>Active Forms</h1>
-  <% forms.forEach(form => { %>
-    <form action="/submit-answer/<%= form.id %>" method="POST">
-      <h2><%= form.title %></h2>
-      
-      <% form.questions.forEach((question, i) => { %>
-        <div class="question-block">
-          <p><%= question.question_text %></p>
+  <div class="container">
+    <a href="/dashboard" class="back-link">← Back to Dashboard</a>
+    
+    <h1>Active Forms</h1>
 
-          <% if (question.question_type === 'radio') { %>
-            <% question.options.forEach((option, j) => { %>
-              <input type="radio" name="answer_<%= i %>" value="<%= option %>" /> <%= option %><br>
+    <% if (message) { %>
+      <div class="message info-message">
+        <%= message %>
+      </div>
+    <% } %>
+
+    <% if (forms.length === 0) { %>
+      <div class="message info-message">
+        У вас нет активных заданий для заполнения.
+      </div>
+    <% } else { %>
+      <% forms.forEach(form => { %>
+        <div class="form-container">
+          <form action="/submit-answer/<%= form.id %>" method="POST" enctype="multipart/form-data">
+            <h2><%= form.title %></h2>
+            
+            <% form.questions.forEach((question, i) => { %>
+              <div class="question-block">
+                <p><%= question.question_text %></p>
+
+                <% if (question.question_type === 'radio') { %>
+                  <% question.options.forEach((option, j) => { %>
+                    <div class="option-group">
+                      <label>
+                        <input type="radio" name="answer_<%= i %>" value="<%= option %>" required />
+                        <%= option %>
+                      </label>
+                    </div>
+                  <% }); %>
+                <% } else if (question.question_type === 'checkbox') { %>
+                  <% question.options.forEach((option, j) => { %>
+                    <div class="option-group">
+                      <label>
+                        <input type="checkbox" name="answer_<%= i %>" value="<%= option %>" />
+                        <%= option %>
+                      </label>
+                    </div>
+                  <% }); %>
+                <% } else if (question.question_type === 'dropdown') { %>
+                  <select name="answer_<%= i %>" required>
+                    <option value="">-- Select an option --</option>
+                    <% question.options.forEach((option, j) => { %>
+                      <option value="<%= option %>"><%= option %></option>
+                    <% }); %>
+                  </select>
+                <% } else if (question.question_type === 'short_text') { %>
+                  <input type="text" name="answer_<%= i %>" required />
+                <% } else if (question.question_type === 'long_text') { %>
+                  <textarea name="answer_<%= i %>" rows="4" required></textarea>
+                <% } else if (question.question_type === 'file_upload') { %>
+                  <input type="file" name="answer_<%= i %>" />
+                <% } %>
+              </div>
             <% }); %>
-          <% } else if (question.question_type === 'checkbox') { %>
-            <% question.options.forEach((option, j) => { %>
-              <input type="checkbox" name="answer_<%= i %>" value="<%= option %>" /> <%= option %><br>
-            <% }); %>
-          <% } else if (question.question_type === 'dropdown') { %>
-            <select name="answer_<%= i %>">
-              <% question.options.forEach((option, j) => { %>
-                <option value="<%= option %>"><%= option %></option>
-              <% }); %>
-            </select>
-          <% } else if (question.question_type === 'short_text') { %>
-            <input type="text" name="answer_<%= i %>" />
-          <% } else if (question.question_type === 'file_upload') { %>
-            <input type="file" name="answer_<%= i %>" />
-          <% } %>
+
+            <button type="submit">Submit Form</button>
+          </form>
         </div>
       <% }); %>
-
-      <button type="submit">Submit</button>
-    </form>
-  <% }); %>
+    <% } %>
+  </div>
 </body>
 </html>
