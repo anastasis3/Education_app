@@ -421,6 +421,7 @@ app.post('/results/grade', async (req, res) => {
 
 
 //ПРОСМОТР
+//ПРОСМОТР РЕЗУЛЬТАТОВ СТУДЕНТА - ОБНОВЛЕННАЯ ВЕРСИЯ
 app.get('/results/view/:formId/:studentId', async (req, res) => {
   if (!req.session.user) {
     return res.status(403).send('Access denied');
@@ -430,6 +431,7 @@ app.get('/results/view/:formId/:studentId', async (req, res) => {
   const { formId, studentId } = req.params;
 
   try {
+    // Проверяем доступ к форме
     const formCheck = await pool.query(
       'SELECT * FROM form_templates WHERE id = $1 AND teacher_id = $2',
       [formId, teacherId]
@@ -439,8 +441,23 @@ app.get('/results/view/:formId/:studentId', async (req, res) => {
       return res.status(403).send('Access denied or form not found');
     }
 
+    const form = formCheck.rows[0];
+
+    // Получаем информацию о текущем студенте
+    const studentInfo = await pool.query(
+      'SELECT id, email, name FROM users WHERE id = $1',
+      [studentId]
+    );
+
+    if (studentInfo.rowCount === 0) {
+      return res.status(404).send('Student not found');
+    }
+
+    const student = studentInfo.rows[0];
+
+    // Получаем ответы студента
     const answersResult = await pool.query(
-      `SELECT q.question_text, a.answer_text, a.file_url
+      `SELECT q.question_text, a.answer_text, a.file_url, a.submitted_at
        FROM answers a
        JOIN questions q ON a.question_id = q.id
        WHERE a.form_id = $1 AND a.student_id = $2
@@ -448,24 +465,69 @@ app.get('/results/view/:formId/:studentId', async (req, res) => {
       [formId, studentId]
     );
 
+    // Получаем оценку
     const gradeResult = await pool.query(
-      `SELECT grade, comment FROM grades
+      `SELECT grade, comment, graded_at FROM grades
        WHERE teacher_id = $1 AND student_id = $2 AND form_id = $3`,
       [teacherId, studentId, formId]
     );
 
+    // Получаем список всех студентов, которым назначена форма
+    const assignedStudentsResult = await pool.query(
+      `SELECT u.id, u.email, u.name, 
+              CASE WHEN fr.user_id IS NOT NULL THEN true ELSE false END as has_response
+       FROM form_assignments fa
+       JOIN users u ON fa.user_id = u.id
+       LEFT JOIN form_responses fr ON fr.user_id = u.id AND fr.form_id = fa.form_id
+       WHERE fa.form_id = $1
+       ORDER BY u.name, u.email`,
+      [formId]
+    );
+
+    // Получаем общее количество вопросов
+    const totalQuestionsResult = await pool.query(
+      'SELECT COUNT(*) as count FROM questions WHERE form_id = $1 AND is_active = true',
+      [formId]
+    );
+
+    // Получаем количество ответов
+    const responseCountResult = await pool.query(
+      'SELECT COUNT(*) as count FROM form_responses WHERE form_id = $1',
+      [formId]
+    );
+
+    // Получаем среднюю оценку
+    const averageGradeResult = await pool.query(
+      'SELECT AVG(grade) as avg_grade FROM grades WHERE form_id = $1',
+      [formId]
+    );
+
+    // Получаем дату отправки формы студентом
+    const submissionResult = await pool.query(
+      'SELECT submitted_at FROM form_responses WHERE form_id = $1 AND user_id = $2',
+      [formId, studentId]
+    );
+
     res.render('results-view', {
-      form: formCheck.rows[0],
+      form,
       studentId,
+      studentName: student.name || student.email,
+      studentEmail: student.email,
       answers: answersResult.rows,
       grade: gradeResult.rows[0] || null,
+      assignedStudents: assignedStudentsResult.rows,
+      totalQuestions: parseInt(totalQuestionsResult.rows[0].count),
+      responseCount: parseInt(responseCountResult.rows[0].count),
+      averageGrade: averageGradeResult.rows[0].avg_grade ? parseFloat(averageGradeResult.rows[0].avg_grade) : null,
+      submissionDate: submissionResult.rows[0] ? submissionResult.rows[0].submitted_at : null,
       user: req.session.user,
     });
   } catch (err) {
-    console.error(err);
+    console.error('Error in results view:', err);
     res.status(500).send('Server error');
   }
 });
+
 
 // Роут для выбора формы для просмотра результатов
 app.get('/select-form-results', async (req, res) => {
