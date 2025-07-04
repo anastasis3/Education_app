@@ -1,109 +1,121 @@
-// Fixed route handler for viewing forms
-app.get('/view-form/:id', async (req, res) => {
-  if (!req.session.user) {
-    return res.status(403).send('Access denied');
-  }
-
-  const formId = req.params.id;
-  const userId = req.session.user.id;
-
-  try {
-    // Get form information
-    const formResult = await pool.query(
-      'SELECT * FROM form_templates WHERE id = $1',
-      [formId]
-    );
-
-    if (formResult.rowCount === 0) {
-      return res.status(404).send('Form not found');
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title><%= form.title %></title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 2rem;
+      background: #f9faff;
+      color: #333;
     }
-
-    const form = formResult.rows[0];
-
-    // Check if user has access (either teacher who created it or student assigned to it)
-    let hasAccess = false;
     
-    if (req.session.user.role === 'teacher' && form.teacher_id === userId) {
-      hasAccess = true;
-    } else if (req.session.user.role === 'student') {
-      // Check if student is assigned to this form
-      const assignmentResult = await pool.query(
-        'SELECT 1 FROM form_assignments WHERE form_id = $1 AND user_id = $2',
-        [formId, userId]
-      );
-      hasAccess = assignmentResult.rowCount > 0;
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 2rem;
+      border-radius: 12px;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
     }
-
-    if (!hasAccess) {
-      return res.status(403).send('Access denied');
+    
+    .form-info {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 10px;
+      margin-bottom: 2rem;
+      border-left: 4px solid #4b4fcf;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
     }
-
-    // Get questions for this form
-    const questionsResult = await pool.query(
-      'SELECT * FROM questions WHERE form_id = $1 AND is_active = true ORDER BY question_order',
-      [formId]
-    );
-
-    // Use the simple template instead of the results template
-    res.render('view-form-simple', {
-      form,
-      questions: questionsResult.rows,
-      user: req.session.user
-    });
-
-  } catch (err) {
-    console.error('Error viewing form:', err);
-    res.status(500).send('Server error');
-  }
-});
-
-// Alternative: If you want to keep using the same template, 
-// you need to provide ALL the variables it expects:
-app.get('/view-form/:id', async (req, res) => {
-  if (!req.session.user) {
-    return res.status(403).send('Access denied');
-  }
-
-  const formId = req.params.id;
-  const userId = req.session.user.id;
-
-  try {
-    // Get form information
-    const formResult = await pool.query(
-      'SELECT * FROM form_templates WHERE id = $1',
-      [formId]
-    );
-
-    if (formResult.rowCount === 0) {
-      return res.status(404).send('Form not found');
+    
+    .question {
+      background: white;
+      border: 1px solid #e0e6ff;
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
+    
+    .question-header {
+      color: #4b4fcf;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      font-size: 1.1rem;
+    }
+    
+    .back-link {
+      color: #4b4fcf;
+      text-decoration: none;
+      font-weight: 600;
+      display: inline-block;
+      margin-bottom: 1rem;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      background: white;
+      transition: background-color 0.3s ease;
+    }
+    
+    .back-link:hover {
+      background: #f0f4ff;
+    }
+    
+    .no-questions {
+      text-align: center;
+      padding: 2rem;
+      color: #6c757d;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <a href="/forms" class="back-link">← Back to forms</a>
+  
+  <div class="header">
+    <h1><%= form.title %></h1>
+    <p>Form Preview</p>
+  </div>
 
-    const form = formResult.rows[0];
+  <div class="form-info">
+    <p><strong>Created:</strong> <%= new Date(form.created_at).toLocaleDateString('ru-RU', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }) %></p>
+    <p><strong>Total Questions:</strong> <%= questions.length %></p>
+  </div>
 
-    // Get questions
-    const questionsResult = await pool.query(
-      'SELECT * FROM questions WHERE form_id = $1 AND is_active = true ORDER BY question_order',
-      [formId]
-    );
-
-    // If you want to use the same template, provide ALL required variables
-    res.render('view-form', {
-      form,
-      studentId: userId,
-      studentName: req.session.user.name || 'Unknown',
-      studentEmail: req.session.user.email,
-      answers: [], // Empty answers for preview
-      grade: null, // No grade for preview
-      assignedStudents: [], // Empty for preview
-      totalQuestions: questionsResult.rows.length,
-      responseCount: 0,
-      averageGrade: null,
-      submissionDate: null,
-      user: req.session.user
-    });
-
-  } catch (err) {
-    console.error('Error viewing form:', err);
-    res.status(500).send('Server error');
-  }
-});
+  <% if (questions.length === 0) { %>
+    <div class="no-questions">
+      <h3>No questions added yet.</h3>
+      <p>This form doesn't have any questions. You can add questions by editing the form.</p>
+    </div>
+  <% } else { %>
+    <h3>Questions in this form:</h3>
+    <% questions.forEach((question, idx) => { %>
+      <div class="question">
+        <div class="question-header">Question <%= idx + 1 %>:</div>
+        <p><%= question.question_text %></p>
+        <% if (question.question_type && question.question_type !== 'short_text') { %>
+          <p><small><em>Type: <%= question.question_type %></em></small></p>
+        <% } %>
+        <% if (question.options && question.options.length > 0) { %>
+          <div>
+            <strong>Options:</strong>
+            <ul>
+              <% question.options.forEach(option => { %>
+                <li><%= option %></li>
+              <% }) %>
+            </ul>
+          </div>
+        <% } %>
+      </div>
+    <% }) %>
+  <% } %>
+</body>
+</html>
