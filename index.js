@@ -96,7 +96,7 @@ app.get('/create-form', async (req, res) => {
   }
 
   // Получаем список студентов
-  const students = await pool.query('SELECT id, name FROM users WHERE role = $1 AND is_deleted = false', ['student']);
+  const students = await pool.query('SELECT id, email FROM users WHERE role = $1 AND is_deleted = false', ['student']);
   res.render('create-form', { students: students.rows }); // Передаем список студентов в шаблон
 });
 
@@ -184,39 +184,30 @@ app.get('/forms', async (req, res) => {
   }
 });
 
+//РЕДАКТИРОВАНИЕ ФОРМЫ
 app.get('/edit-form/:id', async (req, res) => {
-  if (!req.session.user || req.session.user.role !== 'teacher') {
-    return res.status(403).send('Access denied. Teachers only.');
-  }
-
   const formId = req.params.id;
-  const userId = req.session.user.id;
-
   try {
-    const formResult = await pool.query(
-      'SELECT * FROM form_templates WHERE id = $1 AND teacher_id = $2',
-      [formId, userId]
-    );
+    // Получаем форму по id
+    const formResult = await pool.query('SELECT * FROM form_templates WHERE id = $1', [formId]);
+    const form = formResult.rows[0];
 
-    if (formResult.rowCount === 0) {
-      return res.status(404).send('Form not found or access denied');
+    if (!form) {
+      return res.status(404).send('Форма не найдена');
     }
 
-    const form = formResult.rows[0];
-    const questionsResult = await pool.query(
-      'SELECT * FROM questions WHERE form_id = $1 ORDER BY question_order',
-      [formId]
-    );
+    // Получаем вопросы, связанные с этой формой
+    const questionsResult = await pool.query('SELECT * FROM questions WHERE form_id = $1 ORDER BY question_order', [formId]);
+    const questions = questionsResult.rows;
 
-    res.render('edit-form', {
-      form,
-      questions: questionsResult.rows
-    });
+    // Передаем форму и вопросы в шаблон
+    res.render('edit-form', { form: { ...form, questions } });
   } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
+    console.error('Ошибка при загрузке формы для редактирования:', err);
+    res.status(500).send('Ошибка сервера');
   }
 });
+
 
 //ОБНОВЛЕНИЕ ФОРМЫ
 app.post('/edit-form/:id', async (req, res) => {

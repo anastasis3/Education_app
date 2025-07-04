@@ -134,7 +134,7 @@
     <label for="students">Assign to Students:</label>
     <select name="students[]" id="students" multiple size="5">
       <% students.forEach(student => { %>
-        <option value="<%= student.id %>"><%= student.name %></option>
+        <option value="<%= student.email %>"><%= student.name %></option>
       <% }) %>
     </select>
 
