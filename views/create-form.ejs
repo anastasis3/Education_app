@@ -62,6 +62,7 @@
     button:hover {
       background: #5a4fcf;
     }
+
     .back-link {
       display: inline-block;
       margin-bottom: 2rem;
@@ -73,6 +74,21 @@
 
     .back-link:hover {
       background: #dee2e6;
+    }
+
+    .delete-btn {
+      padding: 0.2rem 0.5rem;
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      margin-left: 0.5rem;
+    }
+
+    .delete-btn:hover {
+      background: #c82333;
     }
   </style>
 </head>
@@ -103,8 +119,10 @@
         <div id="options_<%= i %>" style="display:none;">
           <label>Options:</label>
           <button type="button" onclick="addOption(<%= i %>)">Add Option</button>
-          <input type="text" name="option_<%= i %>_1" placeholder="Option 1" />
-          <input type="text" name="option_<%= i %>_2" placeholder="Option 2" />
+          <div id="option-container_<%= i %>">
+            <input type="text" name="option_<%= i %>_1" placeholder="Option 1" />
+            <input type="text" name="option_<%= i %>_2" placeholder="Option 2" />
+          </div>
         </div>
 
         <label for="correct_answer_<%= i %>">Correct Answer:</label>
@@ -112,16 +130,37 @@
       </div>
     <% } %>
 
+    <!-- Поле для выбора студентов -->
+    <label for="students">Assign to Students:</label>
+    <select name="students[]" id="students" multiple size="5">
+      <% students.forEach(student => { %>
+        <option value="<%= student.id %>"><%= student.name %></option>
+      <% }) %>
+    </select>
+
     <button type="submit">Save Template</button>
   </form>
 
   <script>
     function addOption(questionNumber) {
-      const container = document.getElementById(`options_${questionNumber}`);
+      const container = document.getElementById(`option-container_${questionNumber}`);
       const input = document.createElement('input');
       input.type = "text";
       input.name = `option_${questionNumber}_${container.children.length + 1}`;
       container.appendChild(input);
+
+      const deleteButton = document.createElement('button');
+      deleteButton.type = "button";
+      deleteButton.textContent = "Delete Option";
+      deleteButton.classList.add('delete-btn');
+      deleteButton.onclick = function() { removeOption(deleteButton, questionNumber); };
+      container.appendChild(deleteButton);
+    }
+
+    function removeOption(deleteButton, questionNumber) {
+      const container = document.getElementById(`option-container_${questionNumber}`);
+      container.removeChild(deleteButton.previousElementSibling); // Remove the input field
+      container.removeChild(deleteButton); // Remove the delete button
     }
 
     document.querySelectorAll('[name^="question_type_"]').forEach(el => {

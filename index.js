@@ -88,21 +88,27 @@ app.get('/dashboard', (req, res) => {
   res.render('dashboard', { user: req.session.user });
 });
 
-// форма создания
-app.get('/create-form', (req, res) => {
+
+// Форма создания
+app.get('/create-form', async (req, res) => {
   if (!req.session.user || req.session.user.role !== 'teacher') {
     return res.status(403).send('Доступ запрещён. Только для учителей.');
   }
-  res.render('create-form'); // views/create-form.ejs
+
+  // Получаем список студентов
+  const students = await pool.query('SELECT id, name FROM users WHERE role = $1 AND is_deleted = false', ['student']);
+  res.render('create-form', { students: students.rows }); // Передаем список студентов в шаблон
 });
 
+
+// Обработка создания формы (POST)
 // Обработка создания формы (POST)
 app.post('/create-form', async (req, res) => {
   if (!req.session.user || req.session.user.role !== 'teacher') {
     return res.status(403).send('Unauthorized');
   }
 
-  const { title } = req.body;
+  const { title, students } = req.body;
   const teacherId = req.session.user.id;
 
   try {
@@ -112,18 +118,44 @@ app.post('/create-form', async (req, res) => {
     );
     const formId = formResult.rows[0].id;
 
+    // Создаем вопросы
     for (let i = 1; i <= 4; i++) {
       const isActive = req.body[`active_${i}`] === 'on';
       const questionText = req.body[`question_${i}`]?.trim();
+      const questionType = req.body[`question_type_${i}`];
 
       if (questionText) {
-        await pool.query(
-          `INSERT INTO questions (form_id, question_text, is_active, question_order)
-           VALUES ($1, $2, $3, $4)`,
-          [formId, questionText, isActive, i]
+        const result = await pool.query(
+          `INSERT INTO questions (form_id, question_text, is_active, question_type, question_order)
+           VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+          [formId, questionText, isActive, questionType, i]
         );
+        const questionId = result.rows[0].id;
+
+        // Опции для вопросов
+        if (['radio', 'checkbox', 'dropdown'].includes(questionType)) {
+          let optionIndex = 1;
+          while (req.body[`option_${i}_${optionIndex}`]) {
+            const optionText = req.body[`option_${i}_${optionIndex}`].trim();
+            if (optionText) {
+              await pool.query(
+                'INSERT INTO options (question_id, option_text) VALUES ($1, $2)',
+                [questionId, optionText]
+              );
+            }
+            optionIndex++;
+          }
+        }
       }
     }
+
+    // Назначаем форму выбранным студентам
+    students.forEach(async (studentId) => {
+      await pool.query(
+        'INSERT INTO form_assignments (form_id, user_id) VALUES ($1, $2)',
+        [formId, studentId]
+      );
+    });
 
     res.redirect('/dashboard');
   } catch (err) {
