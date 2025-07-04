@@ -102,9 +102,9 @@
 
         <div id="options_<%= i %>" style="display:none;">
           <label>Options:</label>
+          <button type="button" onclick="addOption(<%= i %>)">Add Option</button>
           <input type="text" name="option_<%= i %>_1" placeholder="Option 1" />
           <input type="text" name="option_<%= i %>_2" placeholder="Option 2" />
-          <button type="button" onclick="addOption(<%= i %>)">Add Option</button>
         </div>
 
         <label for="correct_answer_<%= i %>">Correct Answer:</label>
