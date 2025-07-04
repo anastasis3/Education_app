@@ -420,7 +420,8 @@ app.post('/results/grade', async (req, res) => {
 });
 
 
-// Updated route handler for viewing forms with questions and assigned students
+//ПРОСМОТР
+// Fixed route handler for viewing forms
 app.get('/view-form/:id', async (req, res) => {
   if (!req.session.user) {
     return res.status(403).send('Access denied');
@@ -430,13 +431,11 @@ app.get('/view-form/:id', async (req, res) => {
   const userId = req.session.user.id;
 
   try {
-    // Get form information with teacher name
-    const formResult = await pool.query(`
-      SELECT ft.*, u.name as teacher_name, u.email as teacher_email
-      FROM form_templates ft
-      LEFT JOIN users u ON ft.teacher_id = u.id
-      WHERE ft.id = $1
-    `, [formId]);
+    // Get form information
+    const formResult = await pool.query(
+      'SELECT * FROM form_templates WHERE id = $1',
+      [formId]
+    );
 
     if (formResult.rowCount === 0) {
       return res.status(404).send('Form not found');
@@ -463,63 +462,16 @@ app.get('/view-form/:id', async (req, res) => {
     }
 
     // Get questions for this form
-    const questionsResult = await pool.query(`
-      SELECT *
-      FROM questions 
-      WHERE form_id = $1 AND is_active = true 
-      ORDER BY question_order
-    `, [formId]);
+    const questionsResult = await pool.query(
+      'SELECT * FROM questions WHERE form_id = $1 AND is_active = true ORDER BY question_order',
+      [formId]
+    );
 
-    // Get assigned students with their response status and grades
-    const assignedStudentsResult = await pool.query(`
-      SELECT 
-        u.id,
-        u.name,
-        u.email,
-        fr.submitted_at,
-        g.grade,
-        g.comment as grade_comment
-      FROM form_assignments fa
-      JOIN users u ON fa.user_id = u.id
-      LEFT JOIN form_responses fr ON fa.form_id = fr.form_id AND fa.user_id = fr.user_id
-      LEFT JOIN grades g ON fa.form_id = g.form_id AND fa.user_id = g.student_id
-      WHERE fa.form_id = $1 AND u.role = 'student' AND u.is_deleted = false
-      ORDER BY u.name, u.email
-    `, [formId]);
-
-    // Get response count
-    const responseCountResult = await pool.query(`
-      SELECT COUNT(*) as count
-      FROM form_responses
-      WHERE form_id = $1
-    `, [formId]);
-
-    // Get average grade
-    const averageGradeResult = await pool.query(`
-      SELECT AVG(grade) as average_grade
-      FROM grades
-      WHERE form_id = $1
-    `, [formId]);
-
-    const responseCount = parseInt(responseCountResult.rows[0].count);
-    const averageGrade = averageGradeResult.rows[0].average_grade;
-
-    // Render the updated template with all required variables
-    res.render('view-form', {
+    // Use the simple template instead of the results template
+    res.render('view-form-simple', {
       form,
       questions: questionsResult.rows,
-      assignedStudents: assignedStudentsResult.rows || [],
-      responseCount,
-      averageGrade: averageGrade ? parseFloat(averageGrade) : null,
-      user: req.session.user,
-      // Add any missing variables that might be referenced in the template
-      studentName: req.session.user.name || req.session.user.email || 'Unknown',
-      studentEmail: req.session.user.email,
-      studentId: userId,
-      answers: [],
-      grade: null,
-      totalQuestions: questionsResult.rows.length,
-      submissionDate: null
+      user: req.session.user
     });
 
   } catch (err) {
@@ -528,8 +480,9 @@ app.get('/view-form/:id', async (req, res) => {
   }
 });
 
-// Alternative route for simple form preview (without student data)
-app.get('/preview-form/:id', async (req, res) => {
+// Alternative: If you want to keep using the same template, 
+// you need to provide ALL the variables it expects:
+app.get('/view-form/:id', async (req, res) => {
   if (!req.session.user) {
     return res.status(403).send('Access denied');
   }
@@ -539,12 +492,10 @@ app.get('/preview-form/:id', async (req, res) => {
 
   try {
     // Get form information
-    const formResult = await pool.query(`
-      SELECT ft.*, u.name as teacher_name
-      FROM form_templates ft
-      LEFT JOIN users u ON ft.teacher_id = u.id
-      WHERE ft.id = $1
-    `, [formId]);
+    const formResult = await pool.query(
+      'SELECT * FROM form_templates WHERE id = $1',
+      [formId]
+    );
 
     if (formResult.rowCount === 0) {
       return res.status(404).send('Form not found');
@@ -552,93 +503,34 @@ app.get('/preview-form/:id', async (req, res) => {
 
     const form = formResult.rows[0];
 
-    // Check access
-    let hasAccess = false;
-    if (req.session.user.role === 'teacher' && form.teacher_id === userId) {
-      hasAccess = true;
-    } else if (req.session.user.role === 'student') {
-      const assignmentResult = await pool.query(
-        'SELECT 1 FROM form_assignments WHERE form_id = $1 AND user_id = $2',
-        [formId, userId]
-      );
-      hasAccess = assignmentResult.rowCount > 0;
-    }
-
-    if (!hasAccess) {
-      return res.status(403).send('Access denied');
-    }
-
     // Get questions
-    const questionsResult = await pool.query(`
-      SELECT *
-      FROM questions 
-      WHERE form_id = $1 AND is_active = true 
-      ORDER BY question_order
-    `, [formId]);
+    const questionsResult = await pool.query(
+      'SELECT * FROM questions WHERE form_id = $1 AND is_active = true ORDER BY question_order',
+      [formId]
+    );
 
-    // Use simple preview template
-    res.render('view-form-simple', {
+    // If you want to use the same template, provide ALL required variables
+    res.render('view-form', {
       form,
-      questions: questionsResult.rows,
+      studentId: userId,
+      studentName: req.session.user.name || 'Unknown',
+      studentEmail: req.session.user.email,
+      answers: [], // Empty answers for preview
+      grade: null, // No grade for preview
+      assignedStudents: [], // Empty for preview
+      totalQuestions: questionsResult.rows.length,
+      responseCount: 0,
+      averageGrade: null,
+      submissionDate: null,
       user: req.session.user
     });
 
   } catch (err) {
-    console.error('Error previewing form:', err);
+    console.error('Error viewing form:', err);
     res.status(500).send('Server error');
   }
 });
 
-// Route to get detailed student response data (for teachers)
-app.get('/form-analytics/:id', async (req, res) => {
-  if (!req.session.user || req.session.user.role !== 'teacher') {
-    return res.status(403).send('Access denied');
-  }
-
-  const formId = req.params.id;
-  const userId = req.session.user.id;
-
-  try {
-    // Verify teacher owns this form
-    const formResult = await pool.query(
-      'SELECT * FROM form_templates WHERE id = $1 AND teacher_id = $2',
-      [formId, userId]
-    );
-
-    if (formResult.rowCount === 0) {
-      return res.status(404).send('Form not found or access denied');
-    }
-
-    // Get detailed analytics data
-    const analyticsResult = await pool.query(`
-      SELECT 
-        u.name as student_name,
-        u.email as student_email,
-        fr.submitted_at,
-        g.grade,
-        g.comment,
-        g.graded_at,
-        COUNT(a.id) as answers_count
-      FROM form_assignments fa
-      JOIN users u ON fa.user_id = u.id
-      LEFT JOIN form_responses fr ON fa.form_id = fr.form_id AND fa.user_id = fr.user_id
-      LEFT JOIN grades g ON fa.form_id = g.form_id AND fa.user_id = g.student_id
-      LEFT JOIN answers a ON fa.form_id = a.form_id AND fa.user_id = a.student_id
-      WHERE fa.form_id = $1 AND u.role = 'student' AND u.is_deleted = false
-      GROUP BY u.id, u.name, u.email, fr.submitted_at, g.grade, g.comment, g.graded_at
-      ORDER BY fr.submitted_at DESC NULLS LAST, u.name
-    `, [formId]);
-
-    res.json({
-      form: formResult.rows[0],
-      analytics: analyticsResult.rows
-    });
-
-  } catch (err) {
-    console.error('Error getting form analytics:', err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
 // Роут для выбора формы для просмотра результатов
 app.get('/select-form-results', async (req, res) => {
   if (!req.session.user || req.session.user.role !== 'teacher') {
