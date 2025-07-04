@@ -102,18 +102,22 @@ app.get('/create-form', async (req, res) => {
 
 
 // Обработка создания формы (POST)
-// Обработка создания формы (POST)
+// Обработка создания формы (POST) - исправленная версия
 app.post('/create-form', async (req, res) => {
   if (!req.session.user || req.session.user.role !== 'teacher') {
     return res.status(403).send('Unauthorized');
   }
 
-let { title, students } = req.body;
-if (!Array.isArray(students)) {
-  students = students ? [students] : [];
-}
+  let { title, students } = req.body;
+  if (!Array.isArray(students)) {
+    students = students ? [students] : [];
+  }
 
   const teacherId = req.session.user.id;
+
+  // Отладка - посмотрим что приходит в req.body
+  console.log('Данные формы:', req.body);
+  console.log('Выбранные студенты:', students);
 
   try {
     const formResult = await pool.query(
@@ -153,17 +157,19 @@ if (!Array.isArray(students)) {
       }
     }
 
-    // Назначаем форму выбранным студентам
-    students.forEach(async (studentId) => {
+    // Назначаем форму выбранным студентам - ИСПРАВЛЕНО
+    for (const studentId of students) {
       await pool.query(
         'INSERT INTO form_assignments (form_id, user_id) VALUES ($1, $2)',
         [formId, studentId]
       );
-    });
+    }
 
     res.redirect('/dashboard');
   } catch (err) {
     console.error('Ошибка при создании формы:', err);
+    console.error('Детали ошибки:', err.message);
+    console.error('Код ошибки:', err.code);
     res.status(500).send('Ошибка сервера');
   }
 });
