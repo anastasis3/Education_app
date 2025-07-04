@@ -1,363 +1,109 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Results for <%= form.title %> - Student <%= studentName %></title>
-  <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      max-width: 900px;
-      margin: 2rem auto;
-      padding: 2rem;
-      background: #f9faff;
-      color: #333;
-    }
-    
-    .header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 2rem;
-      border-radius: 12px;
-      margin-bottom: 2rem;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    }
-    
-    .form-info {
-      background: white;
-      padding: 1.5rem;
-      border-radius: 10px;
-      margin-bottom: 2rem;
-      border-left: 4px solid #4b4fcf;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    }
-    
-    .info-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 1rem;
-      margin-bottom: 1rem;
-    }
-    
-    .info-item {
-      background: #f8f9ff;
-      padding: 1rem;
-      border-radius: 8px;
-      border: 1px solid #e0e6ff;
-    }
-    
-    .info-label {
-      font-weight: 600;
-      color: #4b4fcf;
-      font-size: 0.9rem;
-      margin-bottom: 0.5rem;
-    }
-    
-    .info-value {
-      color: #333;
-      font-size: 1rem;
-    }
-    
-    .student-list {
-      background: #fff3cd;
-      border: 1px solid #ffeaa7;
-      border-radius: 8px;
-      padding: 1rem;
-      margin-top: 1rem;
-    }
-    
-    .student-list h4 {
-      margin: 0 0 0.5rem 0;
-      color: #856404;
-    }
-    
-    .student-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-    }
-    
-    .student-tag {
-      background: #28a745;
-      color: white;
-      padding: 0.25rem 0.75rem;
-      border-radius: 20px;
-      font-size: 0.85rem;
-      font-weight: 500;
-    }
-    
-    .student-tag.current {
-      background: #007bff;
-      font-weight: 600;
-    }
-    
-    .student-tag.no-response {
-      background: #dc3545;
-    }
-    
-    .answer {
-      background: white;
-      border: 1px solid #e0e6ff;
-      border-radius: 10px;
-      padding: 1.5rem;
-      margin-bottom: 1.5rem;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    }
-    
-    .question-header {
-      color: #4b4fcf;
-      font-weight: 600;
-      margin-bottom: 0.5rem;
-      font-size: 1.1rem;
-    }
-    
-    .answer-content {
-      background: #f8f9ff;
-      padding: 1rem;
-      border-radius: 6px;
-      margin-top: 0.5rem;
-      border-left: 3px solid #4b4fcf;
-    }
-    
-    .file-attachment {
-      background: #d4edda;
-      border: 1px solid #c3e6cb;
-      border-radius: 6px;
-      padding: 0.75rem;
-      margin-top: 0.5rem;
-      display: inline-block;
-    }
-    
-    .file-attachment a {
-      color: #155724;
-      text-decoration: none;
-      font-weight: 600;
-    }
-    
-    .grade-section {
-      background: white;
-      padding: 2rem;
-      border-radius: 10px;
-      margin-top: 2rem;
-      border: 2px solid #4b4fcf;
-    }
-    
-    .grade-section h3 {
-      color: #4b4fcf;
-      margin-bottom: 1rem;
-    }
-    
-    .current-grade {
-      background: #d1ecf1;
-      border: 1px solid #bee5eb;
-      border-radius: 6px;
-      padding: 1rem;
-      margin-bottom: 1rem;
-    }
-    
-    label {
-      font-weight: 600;
-      display: block;
-      margin-top: 1rem;
-      color: #4b4fcf;
-    }
-    
-    input[type="number"], textarea {
-      width: 100%;
-      padding: 0.75rem;
-      margin-top: 0.5rem;
-      font-size: 1rem;
-      border-radius: 6px;
-      border: 2px solid #e0e6ff;
-      transition: border-color 0.3s ease;
-    }
-    
-    input[type="number"]:focus, textarea:focus {
-      outline: none;
-      border-color: #4b4fcf;
-    }
-    
-    button {
-      margin-top: 1.5rem;
-      padding: 0.75rem 2rem;
-      font-size: 1rem;
-      color: white;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-    
-    button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    }
-    
-    .back-link {
-      color: #4b4fcf;
-      text-decoration: none;
-      font-weight: 600;
-      display: inline-block;
-      margin-bottom: 1rem;
-      padding: 0.5rem 1rem;
-      border-radius: 6px;
-      background: white;
-      transition: background-color 0.3s ease;
-    }
-    
-    .back-link:hover {
-      background: #f0f4ff;
-    }
-    
-    .stats-bar {
-      background: #e8f4f8;
-      padding: 1rem;
-      border-radius: 8px;
-      margin-top: 1rem;
-      text-align: center;
-    }
-    
-    .stats-item {
-      display: inline-block;
-      margin: 0 1rem;
-      color: #2c3e50;
-      font-weight: 600;
-    }
-    
-    .no-answers {
-      text-align: center;
-      padding: 2rem;
-      color: #6c757d;
-      font-style: italic;
-    }
-  </style>
-</head>
-<body>
-  <a href="/results/<%= form.id %>" class="back-link">← Back to results list</a>
-  
-  <div class="header">
-    <h1><%= form.title %></h1>
-    <p>Detailed Results View</p>
-  </div>
+// Fixed route handler for viewing forms
+app.get('/view-form/:id', async (req, res) => {
+  if (!req.session.user) {
+    return res.status(403).send('Access denied');
+  }
 
-  <div class="form-info">
-    <div class="info-grid">
-      <div class="info-item">
-        <div class="info-label">Current Student</div>
-        <div class="info-value"><%= studentName %> (<%= studentEmail %>)</div>
-      </div>
-      
-      <div class="info-item">
-        <div class="info-label">Form Created</div>
-        <div class="info-value"><%= new Date(form.created_at).toLocaleDateString('ru-RU', { 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        }) %></div>
-      </div>
-      
-      <div class="info-item">
-        <div class="info-label">Submitted</div>
-        <div class="info-value">
-          <% if (submissionDate) { %>
-            <%= new Date(submissionDate).toLocaleDateString('ru-RU', { 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            }) %>
-          <% } else { %>
-            Not submitted yet
-          <% } %>
-        </div>
-      </div>
-      
-      <div class="info-item">
-        <div class="info-label">Total Questions</div>
-        <div class="info-value"><%= totalQuestions %></div>
-      </div>
-    </div>
+  const formId = req.params.id;
+  const userId = req.session.user.id;
 
-    <div class="student-list">
-      <h4>Form assigned to <%= assignedStudents.length %> student(s):</h4>
-      <div class="student-tags">
-        <% assignedStudents.forEach(student => { %>
-          <span class="student-tag <%= student.id == studentId ? 'current' : (student.has_response ? '' : 'no-response') %>">
-            <%= student.name || student.email %>
-            <% if (student.id == studentId) { %>(Current)<% } %>
-            <% if (!student.has_response) { %>(No response)<% } %>
-          </span>
-        <% }) %>
-      </div>
-    </div>
+  try {
+    // Get form information
+    const formResult = await pool.query(
+      'SELECT * FROM form_templates WHERE id = $1',
+      [formId]
+    );
 
-    <div class="stats-bar">
-      <span class="stats-item">📊 Responses: <%= responseCount %>/<%= assignedStudents.length %></span>
-      <span class="stats-item">✅ Completion Rate: <%= Math.round((responseCount / assignedStudents.length) * 100) %>%</span>
-      <% if (averageGrade !== null) { %>
-        <span class="stats-item">📈 Average Grade: <%= averageGrade.toFixed(1) %></span>
-      <% } %>
-    </div>
-  </div>
+    if (formResult.rowCount === 0) {
+      return res.status(404).send('Form not found');
+    }
 
-  <% if (answers.length === 0) { %>
-    <div class="no-answers">
-      <h3>No answers submitted by this student yet.</h3>
-      <p>The student may still be working on the form or hasn't started yet.</p>
-    </div>
-  <% } else { %>
-    <h3>Student Responses:</h3>
-    <% answers.forEach((ans, idx) => { %>
-      <div class="answer">
-        <div class="question-header">Question <%= idx + 1 %>: <%= ans.question_text %></div>
-        <div class="answer-content">
-          <strong>Answer:</strong> <%= ans.answer_text || 'No text answer provided' %>
-        </div>
-        <% if (ans.file_url) { %>
-          <div class="file-attachment">
-            <a href="<%= ans.file_url %>" target="_blank">📎 View File Attachment</a>
-          </div>
-        <% } %>
-      </div>
-    <% }) %>
-  <% } %>
+    const form = formResult.rows[0];
 
-  <div class="grade-section">
-    <h3>Grade Assignment</h3>
+    // Check if user has access (either teacher who created it or student assigned to it)
+    let hasAccess = false;
     
-    <% if (grade) { %>
-      <div class="current-grade">
-        <strong>Current Grade:</strong> <%= grade.grade %>/100<br>
-        <strong>Comment:</strong> <%= grade.comment || 'No comment' %><br>
-        <strong>Graded on:</strong> <%= new Date(grade.graded_at).toLocaleDateString('ru-RU', { 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        }) %>
-      </div>
-    <% } %>
+    if (req.session.user.role === 'teacher' && form.teacher_id === userId) {
+      hasAccess = true;
+    } else if (req.session.user.role === 'student') {
+      // Check if student is assigned to this form
+      const assignmentResult = await pool.query(
+        'SELECT 1 FROM form_assignments WHERE form_id = $1 AND user_id = $2',
+        [formId, userId]
+      );
+      hasAccess = assignmentResult.rowCount > 0;
+    }
 
-    <form action="/results/grade" method="POST">
-      <input type="hidden" name="student_id" value="<%= studentId %>">
-      <input type="hidden" name="form_id" value="<%= form.id %>">
+    if (!hasAccess) {
+      return res.status(403).send('Access denied');
+    }
 
-      <label for="grade">Grade (0-100):</label>
-      <input type="number" id="grade" name="grade" min="0" max="100" step="0.01" 
-             value="<%= grade ? grade.grade : '' %>" required>
+    // Get questions for this form
+    const questionsResult = await pool.query(
+      'SELECT * FROM questions WHERE form_id = $1 AND is_active = true ORDER BY question_order',
+      [formId]
+    );
 
-      <label for="comment">Comment:</label>
-      <textarea id="comment" name="comment" rows="4" 
-                placeholder="Enter feedback for the student..."><%= grade ? grade.comment : '' %></textarea>
+    // Use the simple template instead of the results template
+    res.render('view-form-simple', {
+      form,
+      questions: questionsResult.rows,
+      user: req.session.user
+    });
 
-      <button type="submit">
-        <%= grade ? 'Update Grade' : 'Save Grade' %>
-      </button>
-    </form>
-  </div>
-</body>
-</html>
+  } catch (err) {
+    console.error('Error viewing form:', err);
+    res.status(500).send('Server error');
+  }
+});
+
+// Alternative: If you want to keep using the same template, 
+// you need to provide ALL the variables it expects:
+app.get('/view-form/:id', async (req, res) => {
+  if (!req.session.user) {
+    return res.status(403).send('Access denied');
+  }
+
+  const formId = req.params.id;
+  const userId = req.session.user.id;
+
+  try {
+    // Get form information
+    const formResult = await pool.query(
+      'SELECT * FROM form_templates WHERE id = $1',
+      [formId]
+    );
+
+    if (formResult.rowCount === 0) {
+      return res.status(404).send('Form not found');
+    }
+
+    const form = formResult.rows[0];
+
+    // Get questions
+    const questionsResult = await pool.query(
+      'SELECT * FROM questions WHERE form_id = $1 AND is_active = true ORDER BY question_order',
+      [formId]
+    );
+
+    // If you want to use the same template, provide ALL required variables
+    res.render('view-form', {
+      form,
+      studentId: userId,
+      studentName: req.session.user.name || 'Unknown',
+      studentEmail: req.session.user.email,
+      answers: [], // Empty answers for preview
+      grade: null, // No grade for preview
+      assignedStudents: [], // Empty for preview
+      totalQuestions: questionsResult.rows.length,
+      responseCount: 0,
+      averageGrade: null,
+      submissionDate: null,
+      user: req.session.user
+    });
+
+  } catch (err) {
+    console.error('Error viewing form:', err);
+    res.status(500).send('Server error');
+  }
+});

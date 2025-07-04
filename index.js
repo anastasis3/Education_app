@@ -421,96 +421,113 @@ app.post('/results/grade', async (req, res) => {
 
 
 //ПРОСМОТР
-//ПРОСМОТР РЕЗУЛЬТАТОВ СТУДЕНТА - ОБНОВЛЕННАЯ ВЕРСИЯ
-// Example of corrected /create-form route
-app.post('/create-form', async (req, res) => {
-  if (!req.session.user || req.session.user.role !== 'teacher') {
+// Fixed route handler for viewing forms
+app.get('/view-form/:id', async (req, res) => {
+  if (!req.session.user) {
     return res.status(403).send('Access denied');
   }
 
-  const { title, questions } = req.body;
-  const teacherId = req.session.user.id;
+  const formId = req.params.id;
+  const userId = req.session.user.id;
 
   try {
-    // Start transaction
-    await pool.query('BEGIN');
-
-    // Insert form - MAKE SURE COLUMN NAMES MATCH YOUR TABLE
+    // Get form information
     const formResult = await pool.query(
-      'INSERT INTO form_templates (teacher_id, title) VALUES ($1, $2) RETURNING id',
-      [teacherId, title]
+      'SELECT * FROM form_templates WHERE id = $1',
+      [formId]
     );
 
-    const formId = formResult.rows[0].id;
-
-    // Insert questions if provided
-    if (questions && Array.isArray(questions)) {
-      for (let i = 0; i < questions.length; i++) {
-        const question = questions[i];
-        
-        // Make sure all required fields are present
-        if (!question.question_text) {
-          throw new Error(`Question ${i + 1} is missing question_text`);
-        }
-
-        await pool.query(
-          `INSERT INTO questions (form_id, question_text, question_order, question_type, options, correct_answer) 
-           VALUES ($1, $2, $3, $4, $5, $6)`,
-          [
-            formId,
-            question.question_text,
-            i + 1, // question_order
-            question.question_type || 'short_text', // default type
-            question.options || null, // array of options
-            question.correct_answer || null
-          ]
-        );
-      }
+    if (formResult.rowCount === 0) {
+      return res.status(404).send('Form not found');
     }
 
-    await pool.query('COMMIT');
-    res.redirect('/dashboard');
+    const form = formResult.rows[0];
+
+    // Check if user has access (either teacher who created it or student assigned to it)
+    let hasAccess = false;
     
-  } catch (err) {
-    await pool.query('ROLLBACK');
-    console.error('Error creating form:', err);
-    console.error('Error details:', {
-      message: err.message,
-      code: err.code,
-      constraint: err.constraint,
-      column: err.column,
-      dataType: err.dataType
+    if (req.session.user.role === 'teacher' && form.teacher_id === userId) {
+      hasAccess = true;
+    } else if (req.session.user.role === 'student') {
+      // Check if student is assigned to this form
+      const assignmentResult = await pool.query(
+        'SELECT 1 FROM form_assignments WHERE form_id = $1 AND user_id = $2',
+        [formId, userId]
+      );
+      hasAccess = assignmentResult.rowCount > 0;
+    }
+
+    if (!hasAccess) {
+      return res.status(403).send('Access denied');
+    }
+
+    // Get questions for this form
+    const questionsResult = await pool.query(
+      'SELECT * FROM questions WHERE form_id = $1 AND is_active = true ORDER BY question_order',
+      [formId]
+    );
+
+    // Use the simple template instead of the results template
+    res.render('view-form-simple', {
+      form,
+      questions: questionsResult.rows,
+      user: req.session.user
     });
-    res.status(500).send('Error creating form: ' + err.message);
+
+  } catch (err) {
+    console.error('Error viewing form:', err);
+    res.status(500).send('Server error');
   }
 });
 
-// Alternative simpler version if you're only creating forms without questions initially
-app.post('/create-form-simple', async (req, res) => {
-  if (!req.session.user || req.session.user.role !== 'teacher') {
+// Alternative: If you want to keep using the same template, 
+// you need to provide ALL the variables it expects:
+app.get('/view-form/:id', async (req, res) => {
+  if (!req.session.user) {
     return res.status(403).send('Access denied');
   }
 
-  const { title } = req.body;
-  const teacherId = req.session.user.id;
-
-  // Validate input
-  if (!title || title.trim() === '') {
-    return res.status(400).send('Form title is required');
-  }
+  const formId = req.params.id;
+  const userId = req.session.user.id;
 
   try {
-    const result = await pool.query(
-      'INSERT INTO form_templates (teacher_id, title) VALUES ($1, $2) RETURNING id',
-      [teacherId, title.trim()]
+    // Get form information
+    const formResult = await pool.query(
+      'SELECT * FROM form_templates WHERE id = $1',
+      [formId]
     );
 
-    const formId = result.rows[0].id;
-    res.redirect(`/edit-form/${formId}`);
-    
+    if (formResult.rowCount === 0) {
+      return res.status(404).send('Form not found');
+    }
+
+    const form = formResult.rows[0];
+
+    // Get questions
+    const questionsResult = await pool.query(
+      'SELECT * FROM questions WHERE form_id = $1 AND is_active = true ORDER BY question_order',
+      [formId]
+    );
+
+    // If you want to use the same template, provide ALL required variables
+    res.render('view-form', {
+      form,
+      studentId: userId,
+      studentName: req.session.user.name || 'Unknown',
+      studentEmail: req.session.user.email,
+      answers: [], // Empty answers for preview
+      grade: null, // No grade for preview
+      assignedStudents: [], // Empty for preview
+      totalQuestions: questionsResult.rows.length,
+      responseCount: 0,
+      averageGrade: null,
+      submissionDate: null,
+      user: req.session.user
+    });
+
   } catch (err) {
-    console.error('Error creating form:', err);
-    res.status(500).send('Error creating form');
+    console.error('Error viewing form:', err);
+    res.status(500).send('Server error');
   }
 });
 
