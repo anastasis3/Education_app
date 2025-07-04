@@ -108,7 +108,11 @@ app.post('/create-form', async (req, res) => {
     return res.status(403).send('Unauthorized');
   }
 
-  const { title, students } = req.body;
+let { title, students } = req.body;
+if (!Array.isArray(students)) {
+  students = students ? [students] : [];
+}
+
   const teacherId = req.session.user.id;
 
   try {
