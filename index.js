@@ -633,153 +633,73 @@ app.get('/active-form', async (req, res) => {
   }
 });
 
-// Обработчик отправки ответов студента
-app.post('/submit-answer/:formId', upload.single('file'), async (req, res) => {
-    try {
-        const formId = req.params.formId;
-        const userId = req.session.userId;
-        
-        if (!userId) {
-            return res.status(401).json({ error: 'Не авторизован' });
-        }
+// Route to handle form submission
+app.post('/submit-answer/:formId', async (req, res) => {
+  if (!req.session.user || req.session.user.role !== 'student') {
+    return res.status(403).send('Доступ запрещён. Только для студентов.');
+  }
 
-        console.log('Получена форма:', formId);
-        console.log('Данные формы:', req.body);
-        console.log('Файл:', req.file);
+  const formId = req.params.formId;
+  const studentId = req.session.user.id;
 
-        // Получаем форму и вопросы
-        const form = await db.query(
-            'SELECT * FROM form_templates WHERE id = $1',
-            [formId]
-        );
+  try {
+    // Check if student is assigned to this form
+    const assignmentCheck = await pool.query(
+      'SELECT 1 FROM form_assignments WHERE form_id = $1 AND user_id = $2',
+      [formId, studentId]
+    );
 
-        if (form.rows.length === 0) {
-            return res.status(404).json({ error: 'Форма не найдена' });
-        }
-
-        const questions = await db.query(
-            'SELECT * FROM questions WHERE form_id = $1 ORDER BY question_order',
-            [formId]
-        );
-
-        // Проверяем, не отправлял ли уже студент эту форму
-        const existingResponse = await db.query(
-            'SELECT id FROM form_responses WHERE user_id = $1 AND form_id = $2',
-            [userId, formId]
-        );
-
-        if (existingResponse.rows.length > 0) {
-            return res.status(400).json({ error: 'Вы уже отправили эту форму' });
-        }
-
-        // Начинаем транзакцию
-        await db.query('BEGIN');
-
-        try {
-            // Создаем запись о том, что форма отправлена
-            const responseResult = await db.query(
-                'INSERT INTO form_responses (user_id, form_id) VALUES ($1, $2) RETURNING id',
-                [userId, formId]
-            );
-
-            // Обрабатываем каждый вопрос
-            for (let i = 0; i < questions.rows.length; i++) {
-                const question = questions.rows[i];
-                const answerKey = `answer_${i}`;
-                
-                let answerValue = req.body[answerKey];
-                let selectedOptions = null;
-
-                // Обработка разных типов ответов
-                if (question.question_type === 'checkbox') {
-                    // Для чекбоксов может быть массив значений
-                    if (Array.isArray(answerValue)) {
-                        selectedOptions = answerValue;
-                        answerValue = answerValue.join(', ');
-                    } else if (answerValue) {
-                        selectedOptions = [answerValue];
-                    } else {
-                        selectedOptions = [];
-                        answerValue = '';
-                    }
-                } else if (question.question_type === 'file_upload') {
-                    // Для файлов проверяем, есть ли загруженный файл
-                    if (req.file) {
-                        answerValue = req.file.filename;
-                    } else {
-                        answerValue = '';
-                    }
-                } else {
-                    // Для остальных типов вопросов
-                    if (!answerValue) {
-                        answerValue = '';
-                    }
-                }
-
-                // Сохраняем ответ
-                await db.query(
-                    `INSERT INTO answers (student_id, form_id, question_id, answer_text, selected_options) 
-                     VALUES ($1, $2, $3, $4, $5)`,
-                    [userId, formId, question.id, answerValue, selectedOptions]
-                );
-            }
-
-            // Подтверждаем транзакцию
-            await db.query('COMMIT');
-
-            console.log('Форма успешно отправлена');
-            res.json({ 
-                success: true, 
-                message: 'Форма успешно отправлена!' 
-            });
-
-        } catch (error) {
-            // Откатываем транзакцию в случае ошибки
-            await db.query('ROLLBACK');
-            throw error;
-        }
-
-    } catch (error) {
-        console.error('Ошибка при отправке формы:', error);
-        res.status(500).json({ 
-            error: 'Ошибка при отправке формы',
-            details: error.message 
-        });
+    if (assignmentCheck.rowCount === 0) {
+      return res.status(403).send('Вы не назначены на эту форму.');
     }
-});
 
-// Дополнительно: обработчик для получения отправленных форм студента
-app.get('/my-submissions', async (req, res) => {
-    try {
-        const userId = req.session.userId;
-        
-        if (!userId) {
-            return res.redirect('/');
+    // Check if student has already submitted this form
+    const submissionCheck = await pool.query(
+      'SELECT 1 FROM form_responses WHERE form_id = $1 AND user_id = $2',
+      [formId, studentId]
+    );
+
+    if (submissionCheck.rowCount > 0) {
+      return res.status(400).send('Вы уже отправили ответы на эту форму.');
+    }
+
+    // Create form response record
+    const responseResult = await pool.query(
+      'INSERT INTO form_responses (form_id, user_id) VALUES ($1, $2) RETURNING id',
+      [formId, studentId]
+    );
+    const responseId = responseResult.rows[0].id;
+
+    // Get questions for this form
+    const questionsResult = await pool.query(
+      'SELECT id, question_order FROM questions WHERE form_id = $1 AND is_active = true ORDER BY question_order',
+      [formId]
+    );
+
+    // Save answers
+    for (const question of questionsResult.rows) {
+      const answerKey = `answer_${question.question_order - 1}`; // Adjust for 0-based indexing
+      let answerValue = req.body[answerKey];
+
+      if (answerValue) {
+        // Handle checkbox answers (arrays)
+        if (Array.isArray(answerValue)) {
+          answerValue = answerValue.join(', ');
         }
 
-        const submissions = await db.query(`
-            SELECT 
-                ft.id,
-                ft.title,
-                fr.submitted_at,
-                g.grade,
-                g.comment
-            FROM form_responses fr
-            JOIN form_templates ft ON fr.form_id = ft.id
-            LEFT JOIN grades g ON g.form_id = ft.id AND g.student_id = fr.user_id
-            WHERE fr.user_id = $1
-            ORDER BY fr.submitted_at DESC
-        `, [userId]);
-
-        res.render('my-submissions', {
-            submissions: submissions.rows,
-            user: req.session.user
-        });
-
-    } catch (error) {
-        console.error('Ошибка при получении отправленных форм:', error);
-        res.status(500).send('Ошибка сервера');
+        await pool.query(
+          'INSERT INTO answer_responses (response_id, question_id, answer_text) VALUES ($1, $2, $3)',
+          [responseId, question.id, answerValue]
+        );
+      }
     }
+
+    res.redirect('/dashboard?message=Форма успешно отправлена!');
+
+  } catch (err) {
+    console.error('Ошибка при отправке формы:', err);
+    res.status(500).send('Ошибка сервера');
+  }
 });
 
 // Запуск сервера
