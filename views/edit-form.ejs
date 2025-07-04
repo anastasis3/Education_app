@@ -66,33 +66,48 @@
 </head>
 <body>
   <h1>Edit Form</h1>
-  <form action="/edit-form/<%= form.id %>" method="POST">
+ <form action="/edit-form/<%= form.id %>" method="POST">
     <label for="title">Title:</label>
     <input
       type="text"
       id="title"
       name="title"
-      placeholder="Enter form title"
-      required
       value="<%= form.title %>"
+      required
     />
 
-    <% for (let i = 1; i <= 4; i++) { 
-      const question = questions.find(q => q.question_order === i);
-    %>
+    <% form.questions.forEach((question, i) => { %>
       <div class="question-block">
         <label>
-          <input type="checkbox" name="active_<%= i %>" <%= question && question.is_active ? 'checked' : '' %> />
-          Activate Question <%= i %>
+          <input type="checkbox" name="active_<%= i + 1 %>" <%= question.is_active ? 'checked' : '' %> />
+          Activate Question <%= i + 1 %>
         </label>
         <input
           type="text"
-          name="question_<%= i %>"
-          placeholder="Enter question <%= i %> text"
-          value="<%= question ? question.question_text : '' %>"
+          name="question_<%= i + 1 %>"
+          value="<%= question.question_text %>"
+          required
         />
+        
+        <label for="question_type_<%= i + 1 %>">Question Type:</label>
+        <select name="question_type_<%= i + 1 %>" required>
+          <option value="radio" <%= question.question_type === 'radio' ? 'selected' : '' %>>Radio Buttons</option>
+          <option value="checkbox" <%= question.question_type === 'checkbox' ? 'selected' : '' %>>Checkboxes</option>
+          <option value="dropdown" <%= question.question_type === 'dropdown' ? 'selected' : '' %>>Dropdown</option>
+          <option value="short_text" <%= question.question_type === 'short_text' ? 'selected' : '' %>>Short Text</option>
+          <option value="file_upload" <%= question.question_type === 'file_upload' ? 'selected' : '' %>>File Upload</option>
+        </select>
+
+        <div id="options_<%= i + 1 %>" class="options-container" style="display:<%= question.question_type === 'radio' || question.question_type === 'checkbox' || question.question_type === 'dropdown' ? 'block' : 'none' %>;">
+          <% question.options.forEach((option, j) => { %>
+            <input type="text" name="option_<%= i + 1 %>_<%= j + 1 %>" value="<%= option %>" />
+          <% }); %>
+        </div>
+
+        <label for="correct_answer_<%= i + 1 %>">Correct Answer:</label>
+        <input type="text" name="correct_answer_<%= i + 1 %>" value="<%= question.correct_answer %>" />
       </div>
-    <% } %>
+    <% }); %>
 
     <button type="submit">Save Changes</button>
   </form>

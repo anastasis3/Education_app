@@ -80,21 +80,61 @@
   <h1>Create Assignment</h1>
   <a href="/dashboard" class="back-link">Back to dashboard</a><br><br>
   <form action="/create-form" method="POST">
-  <label for="title">Title:</label>
-  <input type="text" id="title" name="title" placeholder="Enter form title" required />
+    <label for="title">Title:</label>
+    <input type="text" id="title" name="title" placeholder="Enter form title" required />
 
-  <% for (let i = 1; i <= 4; i++) { %>
-    <div class="question-block">
-      <label>
-        <input type="checkbox" name="active_<%= i %>" />
-        Activate Question <%= i %>
-      </label>
-      <input type="text" name="question_<%= i %>" placeholder="Enter question <%= i %> text" />
-    </div>
-  <% } %>
+    <% for (let i = 1; i <= 4; i++) { %>
+      <div class="question-block">
+        <label>
+          <input type="checkbox" name="active_<%= i %>" />
+          Activate Question <%= i %>
+        </label>
+        <input type="text" name="question_<%= i %>" placeholder="Enter question <%= i %> text" required />
+        
+        <label for="question_type_<%= i %>">Question Type:</label>
+        <select name="question_type_<%= i %>" id="question_type_<%= i %>" required>
+          <option value="radio">Radio Buttons (single choice)</option>
+          <option value="checkbox">Checkboxes (multiple choice)</option>
+          <option value="dropdown">Dropdown (select one)</option>
+          <option value="short_text">Short Text</option>
+          <option value="file_upload">File Upload</option>
+        </select>
 
-  <button type="submit">Save Template</button>
-</form>
+        <div id="options_<%= i %>" style="display:none;">
+          <label>Options:</label>
+          <input type="text" name="option_<%= i %>_1" placeholder="Option 1" />
+          <input type="text" name="option_<%= i %>_2" placeholder="Option 2" />
+          <button type="button" onclick="addOption(<%= i %>)">Add Option</button>
+        </div>
 
+        <label for="correct_answer_<%= i %>">Correct Answer:</label>
+        <input type="text" name="correct_answer_<%= i %>" placeholder="Enter the correct answer" />
+      </div>
+    <% } %>
+
+    <button type="submit">Save Template</button>
+  </form>
+
+  <script>
+    function addOption(questionNumber) {
+      const container = document.getElementById(`options_${questionNumber}`);
+      const input = document.createElement('input');
+      input.type = "text";
+      input.name = `option_${questionNumber}_${container.children.length + 1}`;
+      container.appendChild(input);
+    }
+
+    document.querySelectorAll('[name^="question_type_"]').forEach(el => {
+      el.addEventListener('change', function() {
+        const questionNumber = this.name.split('_')[2];
+        const optionsContainer = document.getElementById(`options_${questionNumber}`);
+        if (['radio', 'checkbox', 'dropdown'].includes(this.value)) {
+          optionsContainer.style.display = 'block';
+        } else {
+          optionsContainer.style.display = 'none';
+        }
+      });
+    });
+  </script>
 </body>
 </html>

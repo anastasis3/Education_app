@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Active Forms</title>
+</head>
+<body>
+  <h1>Active Forms</h1>
+  <% forms.forEach(form => { %>
+    <form action="/submit-answer/<%= form.id %>" method="POST">
+      <h2><%= form.title %></h2>
+      
+      <% form.questions.forEach((question, i) => { %>
+        <div class="question-block">
+          <p><%= question.question_text %></p>
+
+          <% if (question.question_type === 'radio') { %>
+            <% question.options.forEach((option, j) => { %>
+              <input type="radio" name="answer_<%= i %>" value="<%= option %>" /> <%= option %><br>
+            <% }); %>
+          <% } else if (question.question_type === 'checkbox') { %>
+            <% question.options.forEach((option, j) => { %>
+              <input type="checkbox" name="answer_<%= i %>" value="<%= option %>" /> <%= option %><br>
+            <% }); %>
+          <% } else if (question.question_type === 'dropdown') { %>
+            <select name="answer_<%= i %>">
+              <% question.options.forEach((option, j) => { %>
+                <option value="<%= option %>"><%= option %></option>
+              <% }); %>
+            </select>
+          <% } else if (question.question_type === 'short_text') { %>
+            <input type="text" name="answer_<%= i %>" />
+          <% } else if (question.question_type === 'file_upload') { %>
+            <input type="file" name="answer_<%= i %>" />
+          <% } %>
+        </div>
+      <% }); %>
+
+      <button type="submit">Submit</button>
+    </form>
+  <% }); %>
+</body>
+</html>
