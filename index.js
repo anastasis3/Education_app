@@ -390,195 +390,98 @@ app.get('/results/:formId', async (req, res) => {
 });
 
 // РОУТ ДЛЯ ПРОСМОТРА ОТВЕТОВ СТУДЕНТА И ВЫСТАВЛЕНИЯ ОЦЕНКИ
-app.get('/results/view/:formId/:studentId', async (req, res) => {
-  try {
-    const { formId, studentId } = req.params;
-    
-    if (!req.session.user || req.session.user.role !== 'teacher') {
-      return res.redirect('/login');
-    }
-
-    // Получаем информацию о форме
-    const formQuery = `
-      SELECT ft.*, u.email as teacher_name 
-      FROM form_templates ft 
-      JOIN users u ON ft.teacher_id = u.id 
-      WHERE ft.id = $1 AND ft.teacher_id = $2
-    `;
-    const formResult = await pool.query(formQuery, [formId, req.session.user.id]);
-    
-    if (formResult.rows.length === 0) {
-      return res.status(404).send('Form not found or access denied');
-    }
-
-    const form = formResult.rows[0];
-
-    // Получаем информацию о студенте
-    const studentQuery = `
-      SELECT id, email, email as name 
-      FROM users 
-      WHERE id = $1 AND role = 'student'
-    `;
-    const studentResult = await pool.query(studentQuery, [studentId]);
-    
-    if (studentResult.rows.length === 0) {
-      return res.status(404).send('Student not found');
-    }
-
-    const student = studentResult.rows[0];
-
-    // Получаем все вопросы формы
-    const questionsQuery = `
-      SELECT id, question_text, question_type, question_order
-      FROM questions 
-      WHERE form_id = $1 AND is_active = true
-      ORDER BY question_order
-    `;
-    const questionsResult = await pool.query(questionsQuery, [formId]);
-    const questions = questionsResult.rows;
-
-    // Получаем ответы студента
-// Исправленный запрос для получения ответов студента
-const answersQuery = `
-  SELECT a.*, q.question_text, q.question_type, q.question_order
-  FROM answers a
-  JOIN questions q ON a.question_id = q.id
-  JOIN form_responses fr ON a.response_id = fr.id
-  WHERE fr.user_id = $1 AND fr.form_id = $2
-  ORDER BY q.question_order
-`;
-const answersResult = await pool.query(answersQuery, [studentId, formId]);
-const answers = answersResult.rows;
-
-    // Получаем текущую оценку
-    const gradeQuery = `
-      SELECT grade, comment
-      FROM grades
-      WHERE student_id = $1 AND form_id = $2 AND teacher_id = $3
-    `;
-    const gradeResult = await pool.query(gradeQuery, [studentId, formId, req.session.user.id]);
-    const currentGrade = gradeResult.rows[0] || null;
-
-    // Создаем объединенный массив вопросов с ответами
-    const questionsWithAnswers = questions.map(question => {
-      const studentAnswer = answers.find(a => a.question_id === question.id);
-      return {
-        ...question,
-        student_answer: studentAnswer ? studentAnswer.answer_text : null,
-        answer_id: studentAnswer ? studentAnswer.id : null
-      };
-    });
-
-    res.render('result-view', {
-      form,
-      studentId: student.id, 
-      questionsWithAnswers,
-      currentGrade,
-      user: req.session.user
-});
-
-
-  } catch (error) {
-    console.error('Error loading grading page:', error);
-    res.status(500).send('Server error');
-  }
-});
 
 // ОЦЕНКА КОНКРЕТНОГО ОТВЕТА
+// Keep only ONE of these routes. I recommend keeping the second, "FIXED ROUTE",
+// and modifying its res.render call.
+
 // FIXED ROUTE FOR VIEWING STUDENT RESPONSES AND GRADING
 app.get('/results/view/:formId/:studentId', async (req, res) => {
-  try {
-    const { formId, studentId } = req.params;
-    
-    if (!req.session.user || req.session.user.role !== 'teacher') {
-      return res.redirect('/login');
+    try {
+        const { formId, studentId } = req.params;
+
+        if (!req.session.user || req.session.user.role !== 'teacher') {
+            return res.redirect('/login');
+        }
+
+        // Get form information
+        const formQuery = `
+            SELECT ft.*, u.email as teacher_name
+            FROM form_templates ft
+            JOIN users u ON ft.teacher_id = u.id
+            WHERE ft.id = $1 AND ft.teacher_id = $2
+        `;
+        const formResult = await pool.query(formQuery, [formId, req.session.user.id]);
+
+        if (formResult.rows.length === 0) {
+            return res.status(404).send('Form not found or access denied');
+        }
+
+        const form = formResult.rows[0];
+
+        // Get student information
+        const studentQuery = `
+            SELECT id, email, email as name
+            FROM users
+            WHERE id = $1 AND role = 'student'
+        `;
+        const studentResult = await pool.query(studentQuery, [studentId]);
+
+        if (studentResult.rows.length === 0) {
+            return res.status(404).send('Student not found');
+        }
+
+        const student = studentResult.rows[0]; // You get student.id from here
+
+        // Get all form questions (even if not answered, for context)
+        const questionsQuery = `
+            SELECT id, question_text, question_type, question_order
+            FROM questions
+            WHERE form_id = $1 AND is_active = true
+            ORDER BY question_order
+        `;
+        const questionsResult = await pool.query(questionsQuery, [formId]);
+        const questions = questionsResult.rows;
+
+
+        // Get student answers - This is the array that result-view.ejs expects as 'answers'
+        const answersQuery = `
+            SELECT a.id, a.answer_text, a.file_url, a.question_id, a.response_id,
+                   q.question_text, q.question_type, q.question_order
+            FROM answers a
+            JOIN questions q ON a.question_id = q.id
+            JOIN form_responses fr ON a.response_id = fr.id
+            WHERE fr.user_id = $1 AND fr.form_id = $2
+            ORDER BY q.question_order
+        `;
+        const answersResult = await pool.query(answersQuery, [studentId, formId]);
+        const answers = answersResult.rows; // This is the 'answers' variable for your EJS template
+
+        // Get current grade - This is the variable your EJS template expects as 'grade'
+        const gradeQuery = `
+            SELECT grade, comment
+            FROM grades
+            WHERE student_id = $1 AND form_id = $2 AND teacher_id = $3
+        `;
+        const gradeResult = await pool.query(gradeQuery, [studentId, formId, req.session.user.id]);
+        const currentGrade = gradeResult.rows[0] || null; // This is the 'grade' variable for your EJS template
+
+        // You were creating 'questionsWithAnswers' for the 'grade-student' template.
+        // For 'result-view.ejs', you primarily need 'answers' directly as fetched.
+
+        res.render('result-view', { // Change 'grade-student' to 'result-view' if that's the intention
+            form: form,
+            studentId: student.id, // Pass student.id as studentId
+            answers: answers, // Pass the fetched answers array
+            grade: currentGrade, // Pass the fetched grade object
+            user: req.session.user
+        });
+
+    } catch (error) {
+        console.error('Error loading grading page:', error);
+        res.status(500).send('Server error');
     }
-
-    // Get form information
-    const formQuery = `
-      SELECT ft.*, u.email as teacher_name 
-      FROM form_templates ft 
-      JOIN users u ON ft.teacher_id = u.id 
-      WHERE ft.id = $1 AND ft.teacher_id = $2
-    `;
-    const formResult = await pool.query(formQuery, [formId, req.session.user.id]);
-    
-    if (formResult.rows.length === 0) {
-      return res.status(404).send('Form not found or access denied');
-    }
-
-    const form = formResult.rows[0];
-
-    // Get student information
-    const studentQuery = `
-      SELECT id, email, email as name 
-      FROM users 
-      WHERE id = $1 AND role = 'student'
-    `;
-    const studentResult = await pool.query(studentQuery, [studentId]);
-    
-    if (studentResult.rows.length === 0) {
-      return res.status(404).send('Student not found');
-    }
-
-    const student = studentResult.rows[0];
-
-    // Get all form questions
-    const questionsQuery = `
-      SELECT id, question_text, question_type, question_order
-      FROM questions 
-      WHERE form_id = $1 AND is_active = true
-      ORDER BY question_order
-    `;
-    const questionsResult = await pool.query(questionsQuery, [formId]);
-    const questions = questionsResult.rows;
-
-    // Get student answers - FIXED QUERY
-    const answersQuery = `
-      SELECT a.id, a.answer_text, a.question_id, a.response_id,
-             q.question_text, q.question_type, q.question_order
-      FROM answers a
-      JOIN questions q ON a.question_id = q.id
-      JOIN form_responses fr ON a.response_id = fr.id
-      WHERE fr.user_id = $1 AND fr.form_id = $2
-      ORDER BY q.question_order
-    `;
-    const answersResult = await pool.query(answersQuery, [studentId, formId]);
-    const answers = answersResult.rows;
-
-    // Get current grade
-    const gradeQuery = `
-      SELECT grade, comment
-      FROM grades
-      WHERE student_id = $1 AND form_id = $2 AND teacher_id = $3
-    `;
-    const gradeResult = await pool.query(gradeQuery, [studentId, formId, req.session.user.id]);
-    const currentGrade = gradeResult.rows[0] || null;
-
-    // Create combined array of questions with answers
-    const questionsWithAnswers = questions.map(question => {
-      const studentAnswer = answers.find(a => a.question_id === question.id);
-      return {
-        ...question,
-        student_answer: studentAnswer ? studentAnswer.answer_text : null,
-        answer_id: studentAnswer ? studentAnswer.id : null
-      };
-    });
-
-    res.render('grade-student', {
-      form,
-      student,
-      questionsWithAnswers,
-      currentGrade,
-      user: req.session.user
-    });
-
-  } catch (error) {
-    console.error('Error loading grading page:', error);
-    res.status(500).send('Server error');
-  }
 });
-
 
 // Роут для выбора формы для просмотра результатов
 app.get('/select-form-results', async (req, res) => {
