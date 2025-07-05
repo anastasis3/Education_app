@@ -4,6 +4,7 @@ const path = require('path');
 const session = require('express-session');
 const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
+const nodemailer = require('nodemailer');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -28,6 +29,14 @@ app.set('views', path.join(__dirname, 'views'));
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Настройка email транспорта
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER || 'your-email@gmail.com',
+    pass: process.env.EMAIL_PASS || 'your-app-password'
+  }
+});
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'auth.html'));
@@ -88,21 +97,22 @@ app.get('/dashboard', (req, res) => {
   res.render('dashboard', { user: req.session.user });
 });
 
-
 // Форма создания
 app.get('/create-form', async (req, res) => {
   if (!req.session.user || req.session.user.role !== 'teacher') {
     return res.status(403).send('Доступ запрещён. Только для учителей.');
   }
 
-  // Получаем список студентов
-  const students = await pool.query('SELECT id, email FROM users WHERE role = $1 AND is_deleted = false', ['student']);
-  res.render('create-form', { students: students.rows }); // Передаем список студентов в шаблон
+  try {
+    const students = await pool.query('SELECT id, email FROM users WHERE role = $1 AND is_deleted = false', ['student']);
+    res.render('create-form', { students: students.rows });
+  } catch (error) {
+    console.error('Ошибка при получении списка студентов:', error);
+    res.status(500).send('Ошибка сервера');
+  }
 });
 
-
 // Обработка создания формы (POST)
-// Обработка создания формы (POST) - исправленная версия
 app.post('/create-form', async (req, res) => {
   if (!req.session.user || req.session.user.role !== 'teacher') {
     return res.status(403).send('Unauthorized');
@@ -114,10 +124,6 @@ app.post('/create-form', async (req, res) => {
   }
 
   const teacherId = req.session.user.id;
-
-  // Отладка - посмотрим что приходит в req.body
-  console.log('Данные формы:', req.body);
-  console.log('Выбранные студенты:', students);
 
   try {
     const formResult = await pool.query(
@@ -157,7 +163,7 @@ app.post('/create-form', async (req, res) => {
       }
     }
 
-    // Назначаем форму выбранным студентам - ИСПРАВЛЕНО
+    // Назначаем форму выбранным студентам
     for (const studentId of students) {
       await pool.query(
         'INSERT INTO form_assignments (form_id, user_id) VALUES ($1, $2)',
@@ -168,8 +174,6 @@ app.post('/create-form', async (req, res) => {
     res.redirect('/dashboard');
   } catch (err) {
     console.error('Ошибка при создании формы:', err);
-    console.error('Детали ошибки:', err.message);
-    console.error('Код ошибки:', err.code);
     res.status(500).send('Ошибка сервера');
   }
 });
@@ -194,11 +198,10 @@ app.get('/forms', async (req, res) => {
   }
 });
 
-//РЕДАКТИРОВАНИЕ ФОРМЫ
+// РЕДАКТИРОВАНИЕ ФОРМЫ
 app.get('/edit-form/:id', async (req, res) => {
   const formId = req.params.id;
   try {
-    // Получаем форму по id
     const formResult = await pool.query('SELECT * FROM form_templates WHERE id = $1', [formId]);
     const form = formResult.rows[0];
 
@@ -206,11 +209,9 @@ app.get('/edit-form/:id', async (req, res) => {
       return res.status(404).send('Форма не найдена');
     }
 
-    // Получаем вопросы, связанные с этой формой
     const questionsResult = await pool.query('SELECT * FROM questions WHERE form_id = $1 ORDER BY question_order', [formId]);
     const questions = questionsResult.rows;
 
-    // Передаем форму и вопросы в шаблон
     res.render('edit-form', { form: { ...form, questions } });
   } catch (err) {
     console.error('Ошибка при загрузке формы для редактирования:', err);
@@ -218,8 +219,7 @@ app.get('/edit-form/:id', async (req, res) => {
   }
 });
 
-
-//ОБНОВЛЕНИЕ ФОРМЫ
+// ОБНОВЛЕНИЕ ФОРМЫ
 app.post('/edit-form/:id', async (req, res) => {
   if (!req.session.user || req.session.user.role !== 'teacher') {
     return res.status(403).send('Access denied. Teachers only.');
@@ -258,14 +258,14 @@ app.post('/edit-form/:id', async (req, res) => {
       }
     }
 
-     res.redirect('/forms');
+    res.redirect('/forms');
   } catch (err) {
     console.error('Error updating form:', err);
     res.status(500).send('Server error');
   }
 });
 
-//УДАЛЕНИЕ ФОРМЫ
+// УДАЛЕНИЕ ФОРМЫ
 app.post('/delete-form/:id', async (req, res) => {
   if (!req.session.user || req.session.user.role !== 'teacher') {
     return res.status(403).send('Access denied. Teachers only.');
@@ -285,7 +285,6 @@ app.post('/delete-form/:id', async (req, res) => {
     }
 
     await pool.query('DELETE FROM questions WHERE form_id = $1', [formId]);
-
     await pool.query('DELETE FROM form_templates WHERE id = $1', [formId]);
 
     res.redirect('/forms');
@@ -295,8 +294,7 @@ app.post('/delete-form/:id', async (req, res) => {
   }
 });
 
-
-//ПРОСМОТР ФОРМЫ
+// ПРОСМОТР ФОРМЫ - ЕДИНСТВЕННАЯ ВЕРСИЯ
 app.get('/view-form/:id', async (req, res) => {
   if (!req.session.user) {
     return res.status(403).send('Access denied');
@@ -307,34 +305,50 @@ app.get('/view-form/:id', async (req, res) => {
 
   try {
     const formResult = await pool.query(
-      'SELECT * FROM form_templates WHERE id = $1 AND teacher_id = $2',
-      [formId, userId]
+      'SELECT * FROM form_templates WHERE id = $1',
+      [formId]
     );
 
     if (formResult.rowCount === 0) {
-      return res.status(404).send('Form not found or access denied');
+      return res.status(404).send('Form not found');
     }
 
     const form = formResult.rows[0];
 
+    // Check access
+    let hasAccess = false;
+    if (req.session.user.role === 'teacher' && form.teacher_id === userId) {
+      hasAccess = true;
+    } else if (req.session.user.role === 'student') {
+      const assignmentResult = await pool.query(
+        'SELECT 1 FROM form_assignments WHERE form_id = $1 AND user_id = $2',
+        [formId, userId]
+      );
+      hasAccess = assignmentResult.rowCount > 0;
+    }
+
+    if (!hasAccess) {
+      return res.status(403).send('Access denied');
+    }
+
     const questionsResult = await pool.query(
-      'SELECT * FROM questions WHERE form_id = $1 ORDER BY question_order',
+      'SELECT * FROM questions WHERE form_id = $1 AND is_active = true ORDER BY question_order',
       [formId]
     );
 
     res.render('view-form', {
-      user: req.session.user,
       form,
       questions: questionsResult.rows,
+      user: req.session.user
     });
+
   } catch (err) {
-    console.error(err);
+    console.error('Error viewing form:', err);
     res.status(500).send('Server error');
   }
 });
 
-
-//РЕЗУЛЬТАТЫ
+// РЕЗУЛЬТАТЫ
 app.get('/results/:formId', async (req, res) => {
   if (!req.session.user) {
     return res.status(403).send('Access denied');
@@ -375,8 +389,100 @@ app.get('/results/:formId', async (req, res) => {
   }
 });
 
-//ОЦЕНКА КОНКРЕТНОГО ОТВЕТА
+// РОУТ ДЛЯ ПРОСМОТРА ОТВЕТОВ СТУДЕНТА И ВЫСТАВЛЕНИЯ ОЦЕНКИ
+app.get('/results/view/:formId/:studentId', async (req, res) => {
+  try {
+    const { formId, studentId } = req.params;
+    
+    if (!req.session.user || req.session.user.role !== 'teacher') {
+      return res.redirect('/login');
+    }
 
+    // Получаем информацию о форме
+    const formQuery = `
+      SELECT ft.*, u.email as teacher_name 
+      FROM form_templates ft 
+      JOIN users u ON ft.teacher_id = u.id 
+      WHERE ft.id = $1 AND ft.teacher_id = $2
+    `;
+    const formResult = await pool.query(formQuery, [formId, req.session.user.id]);
+    
+    if (formResult.rows.length === 0) {
+      return res.status(404).send('Form not found or access denied');
+    }
+
+    const form = formResult.rows[0];
+
+    // Получаем информацию о студенте
+    const studentQuery = `
+      SELECT id, email, email as name 
+      FROM users 
+      WHERE id = $1 AND role = 'student'
+    `;
+    const studentResult = await pool.query(studentQuery, [studentId]);
+    
+    if (studentResult.rows.length === 0) {
+      return res.status(404).send('Student not found');
+    }
+
+    const student = studentResult.rows[0];
+
+    // Получаем все вопросы формы
+    const questionsQuery = `
+      SELECT id, question_text, question_type, question_order
+      FROM questions 
+      WHERE form_id = $1 AND is_active = true
+      ORDER BY question_order
+    `;
+    const questionsResult = await pool.query(questionsQuery, [formId]);
+    const questions = questionsResult.rows;
+
+    // Получаем ответы студента
+    const answersQuery = `
+      SELECT ar.*, q.question_text, q.question_type, q.question_order
+      FROM answer_responses ar
+      JOIN questions q ON ar.question_id = q.id
+      JOIN form_responses fr ON ar.response_id = fr.id
+      WHERE fr.user_id = $1 AND fr.form_id = $2
+      ORDER BY q.question_order
+    `;
+    const answersResult = await pool.query(answersQuery, [studentId, formId]);
+    const answers = answersResult.rows;
+
+    // Получаем текущую оценку
+    const gradeQuery = `
+      SELECT grade, comment
+      FROM grades
+      WHERE student_id = $1 AND form_id = $2 AND teacher_id = $3
+    `;
+    const gradeResult = await pool.query(gradeQuery, [studentId, formId, req.session.user.id]);
+    const currentGrade = gradeResult.rows[0] || null;
+
+    // Создаем объединенный массив вопросов с ответами
+    const questionsWithAnswers = questions.map(question => {
+      const studentAnswer = answers.find(a => a.question_id === question.id);
+      return {
+        ...question,
+        student_answer: studentAnswer ? studentAnswer.answer_text : null,
+        answer_id: studentAnswer ? studentAnswer.id : null
+      };
+    });
+
+    res.render('grade-student', {
+      form,
+      student,
+      questionsWithAnswers,
+      currentGrade,
+      user: req.session.user
+    });
+
+  } catch (error) {
+    console.error('Error loading grading page:', error);
+    res.status(500).send('Server error');
+  }
+});
+
+// ОЦЕНКА КОНКРЕТНОГО ОТВЕТА
 app.post('/results/grade', async (req, res) => {
   if (!req.session.user) {
     return res.status(403).send('Access denied');
@@ -387,13 +493,22 @@ app.post('/results/grade', async (req, res) => {
 
   try {
     const formCheck = await pool.query(
-      'SELECT id FROM form_templates WHERE id = $1 AND teacher_id = $2',
+      'SELECT id, title FROM form_templates WHERE id = $1 AND teacher_id = $2',
       [form_id, teacherId]
     );
 
     if (formCheck.rowCount === 0) {
       return res.status(403).send('Access denied or form not found');
     }
+
+    const formTitle = formCheck.rows[0].title;
+
+    // Получаем информацию о студенте
+    const studentQuery = `
+      SELECT email, email as name FROM users WHERE id = $1
+    `;
+    const studentResult = await pool.query(studentQuery, [student_id]);
+    const student = studentResult.rows[0];
 
     const existingGrade = await pool.query(
       'SELECT id FROM grades WHERE teacher_id = $1 AND student_id = $2 AND form_id = $3',
@@ -412,121 +527,16 @@ app.post('/results/grade', async (req, res) => {
       );
     }
 
-    res.redirect(`/results/view/${form_id}/${student_id}`);
+    // Отправляем уведомление на почту
+    try {
+      await sendGradeNotification(student.email, student.name, formTitle, grade, comment);
+    } catch (emailError) {
+      console.error('Error sending email:', emailError);
+    }
+
+    res.redirect(`/results/${form_id}`);
   } catch (err) {
     console.error(err);
-    res.status(500).send('Server error');
-  }
-});
-
-
-//ПРОСМОТР
-// Fixed route handler for viewing forms
-app.get('/view-form/:id', async (req, res) => {
-  if (!req.session.user) {
-    return res.status(403).send('Access denied');
-  }
-
-  const formId = req.params.id;
-  const userId = req.session.user.id;
-
-  try {
-    // Get form information
-    const formResult = await pool.query(
-      'SELECT * FROM form_templates WHERE id = $1',
-      [formId]
-    );
-
-    if (formResult.rowCount === 0) {
-      return res.status(404).send('Form not found');
-    }
-
-    const form = formResult.rows[0];
-
-    // Check if user has access (either teacher who created it or student assigned to it)
-    let hasAccess = false;
-    
-    if (req.session.user.role === 'teacher' && form.teacher_id === userId) {
-      hasAccess = true;
-    } else if (req.session.user.role === 'student') {
-      // Check if student is assigned to this form
-      const assignmentResult = await pool.query(
-        'SELECT 1 FROM form_assignments WHERE form_id = $1 AND user_id = $2',
-        [formId, userId]
-      );
-      hasAccess = assignmentResult.rowCount > 0;
-    }
-
-    if (!hasAccess) {
-      return res.status(403).send('Access denied');
-    }
-
-    // Get questions for this form
-    const questionsResult = await pool.query(
-      'SELECT * FROM questions WHERE form_id = $1 AND is_active = true ORDER BY question_order',
-      [formId]
-    );
-
-    // Use the simple template instead of the results template
-    res.render('view-form-simple', {
-      form,
-      questions: questionsResult.rows,
-      user: req.session.user
-    });
-
-  } catch (err) {
-    console.error('Error viewing form:', err);
-    res.status(500).send('Server error');
-  }
-});
-
-// Alternative: If you want to keep using the same template, 
-// you need to provide ALL the variables it expects:
-app.get('/view-form/:id', async (req, res) => {
-  if (!req.session.user) {
-    return res.status(403).send('Access denied');
-  }
-
-  const formId = req.params.id;
-  const userId = req.session.user.id;
-
-  try {
-    // Get form information
-    const formResult = await pool.query(
-      'SELECT * FROM form_templates WHERE id = $1',
-      [formId]
-    );
-
-    if (formResult.rowCount === 0) {
-      return res.status(404).send('Form not found');
-    }
-
-    const form = formResult.rows[0];
-
-    // Get questions
-    const questionsResult = await pool.query(
-      'SELECT * FROM questions WHERE form_id = $1 AND is_active = true ORDER BY question_order',
-      [formId]
-    );
-
-    // If you want to use the same template, provide ALL required variables
-    res.render('view-form', {
-      form,
-      studentId: userId,
-      studentName: req.session.user.name || 'Unknown',
-      studentEmail: req.session.user.email,
-      answers: [], // Empty answers for preview
-      grade: null, // No grade for preview
-      assignedStudents: [], // Empty for preview
-      totalQuestions: questionsResult.rows.length,
-      responseCount: 0,
-      averageGrade: null,
-      submissionDate: null,
-      user: req.session.user
-    });
-
-  } catch (err) {
-    console.error('Error viewing form:', err);
     res.status(500).send('Server error');
   }
 });
@@ -551,12 +561,6 @@ app.get('/select-form-results', async (req, res) => {
   }
 });
 
-
-
-
-// Add this route handler to your Express.js application
-// Place it with your other route handlers
-
 // Route to show active forms assigned to the student
 app.get('/active-form', async (req, res) => {
   if (!req.session.user || req.session.user.role !== 'student') {
@@ -566,7 +570,6 @@ app.get('/active-form', async (req, res) => {
   const studentId = req.session.user.id;
 
   try {
-    // Get all forms assigned to this student that haven't been submitted yet
     const assignedFormsResult = await pool.query(`
       SELECT DISTINCT ft.id, ft.title, ft.created_at 
       FROM form_templates ft
@@ -587,11 +590,9 @@ app.get('/active-form', async (req, res) => {
       });
     }
 
-    // Get detailed information for each form including questions and options
     const formsWithDetails = [];
     
     for (const form of assignedFormsResult.rows) {
-      // Get questions for this form
       const questionsResult = await pool.query(`
         SELECT q.id, q.question_text, q.question_type, q.question_order
         FROM questions q
@@ -599,7 +600,6 @@ app.get('/active-form', async (req, res) => {
         ORDER BY q.question_order
       `, [form.id]);
 
-      // Get options for each question
       const questionsWithOptions = [];
       for (const question of questionsResult.rows) {
         const optionsResult = await pool.query(`
@@ -643,7 +643,6 @@ app.post('/submit-answer/:formId', async (req, res) => {
   const studentId = req.session.user.id;
 
   try {
-    // Check if student is assigned to this form
     const assignmentCheck = await pool.query(
       'SELECT 1 FROM form_assignments WHERE form_id = $1 AND user_id = $2',
       [formId, studentId]
@@ -653,7 +652,6 @@ app.post('/submit-answer/:formId', async (req, res) => {
       return res.status(403).send('Вы не назначены на эту форму.');
     }
 
-    // Check if student has already submitted this form
     const submissionCheck = await pool.query(
       'SELECT 1 FROM form_responses WHERE form_id = $1 AND user_id = $2',
       [formId, studentId]
@@ -663,26 +661,22 @@ app.post('/submit-answer/:formId', async (req, res) => {
       return res.status(400).send('Вы уже отправили ответы на эту форму.');
     }
 
-    // Create form response record
     const responseResult = await pool.query(
       'INSERT INTO form_responses (form_id, user_id) VALUES ($1, $2) RETURNING id',
       [formId, studentId]
     );
     const responseId = responseResult.rows[0].id;
 
-    // Get questions for this form
     const questionsResult = await pool.query(
       'SELECT id, question_order FROM questions WHERE form_id = $1 AND is_active = true ORDER BY question_order',
       [formId]
     );
 
-    // Save answers
     for (const question of questionsResult.rows) {
-      const answerKey = `answer_${question.question_order - 1}`; // Adjust for 0-based indexing
+      const answerKey = `answer_${question.question_order - 1}`;
       let answerValue = req.body[answerKey];
 
       if (answerValue) {
-        // Handle checkbox answers (arrays)
         if (Array.isArray(answerValue)) {
           answerValue = answerValue.join(', ');
         }
@@ -701,213 +695,6 @@ app.post('/submit-answer/:formId', async (req, res) => {
     res.status(500).send('Ошибка сервера');
   }
 });
-
-
-
-// Добавьте эти роуты в ваш основной файл сервера (например, app.js или server.js)
-
-const nodemailer = require('nodemailer');
-
-// Настройка email транспорта (замените на ваши настройки)
-const transporter = nodemailer.createTransport({
-  service: 'gmail', // или другой сервис
-  auth: {
-    user: 'anastacia3@gmail.com',
-    pass: 'Ananas2000'
-  }
-});
-
-// Роут для просмотра ответов студента и выставления оценки
-app.get('/results/view/:formId/:studentId', async (req, res) => {
-  try {
-    const { formId, studentId } = req.params;
-    
-    // Проверяем, что пользователь - учитель
-    if (!req.session.user || req.session.user.role !== 'teacher') {
-      return res.redirect('/login');
-    }
-
-    // Получаем информацию о форме
-    const formQuery = `
-      SELECT ft.*, u.name as teacher_name 
-      FROM form_templates ft 
-      JOIN users u ON ft.teacher_id = u.id 
-      WHERE ft.id = $1 AND ft.teacher_id = $2
-    `;
-    const formResult = await db.query(formQuery, [formId, req.session.user.id]);
-    
-    if (formResult.rows.length === 0) {
-      return res.status(404).send('Form not found or access denied');
-    }
-
-    const form = formResult.rows[0];
-
-    // Получаем информацию о студенте
-    const studentQuery = `
-      SELECT id, email, name 
-      FROM users 
-      WHERE id = $1 AND role = 'student'
-    `;
-    const studentResult = await db.query(studentQuery, [studentId]);
-    
-    if (studentResult.rows.length === 0) {
-      return res.status(404).send('Student not found');
-    }
-
-    const student = studentResult.rows[0];
-
-    // Получаем все вопросы формы с правильными ответами
-    const questionsQuery = `
-      SELECT id, question_text, question_type, correct_answer, options
-      FROM questions 
-      WHERE form_id = $1 AND is_active = true
-      ORDER BY question_order
-    `;
-    const questionsResult = await db.query(questionsQuery, [formId]);
-    const questions = questionsResult.rows;
-
-    // Получаем ответы студента
-    const answersQuery = `
-      SELECT a.*, q.question_text, q.question_type, q.correct_answer, q.options
-      FROM answers a
-      JOIN questions q ON a.question_id = q.id
-      WHERE a.student_id = $1 AND a.form_id = $2
-      ORDER BY q.question_order
-    `;
-    const answersResult = await db.query(answersQuery, [studentId, formId]);
-    const answers = answersResult.rows;
-
-    // Получаем текущую оценку, если есть
-    const gradeQuery = `
-      SELECT grade, comment
-      FROM grades
-      WHERE student_id = $1 AND form_id = $2 AND teacher_id = $3
-    `;
-    const gradeResult = await db.query(gradeQuery, [studentId, formId, req.session.user.id]);
-    const currentGrade = gradeResult.rows[0] || null;
-
-    // Создаем объединенный массив вопросов с ответами
-    const questionsWithAnswers = questions.map(question => {
-      const studentAnswer = answers.find(a => a.question_id === question.id);
-      return {
-        ...question,
-        student_answer: studentAnswer ? studentAnswer.answer_text : null,
-        selected_options: studentAnswer ? studentAnswer.selected_options : null,
-        file_url: studentAnswer ? studentAnswer.file_url : null,
-        is_correct: checkAnswer(question, studentAnswer)
-      };
-    });
-
-    res.render('grade_student', {
-      form,
-      student,
-      questionsWithAnswers,
-      currentGrade,
-      title: `Grade ${student.name} - ${form.title}`
-    });
-
-  } catch (error) {
-    console.error('Error loading grading page:', error);
-    res.status(500).send('Server error');
-  }
-});
-
-// Роут для сохранения оценки
-app.post('/results/grade', async (req, res) => {
-  try {
-    const { student_id, form_id, grade, comment } = req.body;
-    
-    // Проверяем, что пользователь - учитель
-    if (!req.session.user || req.session.user.role !== 'teacher') {
-      return res.redirect('/login');
-    }
-
-    // Проверяем, что форма принадлежит учителю
-    const formCheckQuery = `
-      SELECT title FROM form_templates 
-      WHERE id = $1 AND teacher_id = $2
-    `;
-    const formCheckResult = await db.query(formCheckQuery, [form_id, req.session.user.id]);
-    
-    if (formCheckResult.rows.length === 0) {
-      return res.status(403).send('Access denied');
-    }
-
-    const formTitle = formCheckResult.rows[0].title;
-
-    // Получаем информацию о студенте
-    const studentQuery = `
-      SELECT email, name FROM users WHERE id = $1
-    `;
-    const studentResult = await db.query(studentQuery, [student_id]);
-    const student = studentResult.rows[0];
-
-    // Сохраняем или обновляем оценку
-    const upsertGradeQuery = `
-      INSERT INTO grades (teacher_id, student_id, form_id, grade, comment)
-      VALUES ($1, $2, $3, $4, $5)
-      ON CONFLICT (teacher_id, student_id, form_id) 
-      DO UPDATE SET 
-        grade = EXCLUDED.grade,
-        comment = EXCLUDED.comment,
-        graded_at = CURRENT_TIMESTAMP
-    `;
-    
-    await db.query(upsertGradeQuery, [
-      req.session.user.id,
-      student_id,
-      form_id,
-      grade,
-      comment || null
-    ]);
-
-    // Отправляем уведомление на почту студенту
-    try {
-      await sendGradeNotification(student.email, student.name, formTitle, grade, comment);
-    } catch (emailError) {
-      console.error('Error sending email:', emailError);
-      // Продолжаем выполнение, даже если email не отправился
-    }
-
-    res.redirect('/results');
-
-  } catch (error) {
-    console.error('Error saving grade:', error);
-    res.status(500).send('Server error');
-  }
-});
-
-// Функция для проверки правильности ответа
-function checkAnswer(question, studentAnswer) {
-  if (!question.correct_answer || !studentAnswer) {
-    return null; // Нет правильного ответа или студент не ответил
-  }
-
-  switch (question.question_type) {
-    case 'radio':
-    case 'dropdown':
-      return studentAnswer.answer_text === question.correct_answer;
-    
-    case 'checkbox':
-      if (!studentAnswer.selected_options) return false;
-      const correctOptions = question.correct_answer.split(',').map(s => s.trim());
-      const studentOptions = studentAnswer.selected_options;
-      
-      return correctOptions.length === studentOptions.length &&
-             correctOptions.every(option => studentOptions.includes(option));
-    
-    case 'short_text':
-      // Простая проверка на точное совпадение (можно улучшить)
-      return studentAnswer.answer_text.toLowerCase().trim() === 
-             question.correct_answer.toLowerCase().trim();
-    
-    case 'file_upload':
-      return null; // Файлы нужно проверять вручную
-    
-    default:
-      return null;
-  }
-}
 
 // Функция для отправки уведомления об оценке
 async function sendGradeNotification(studentEmail, studentName, formTitle, grade, comment) {
@@ -938,7 +725,7 @@ async function sendGradeNotification(studentEmail, studentName, formTitle, grade
   `;
 
   const mailOptions = {
-    from: 'your-email@gmail.com',
+    from: process.env.EMAIL_USER || 'your-email@gmail.com',
     to: studentEmail,
     subject: subject,
     html: html
