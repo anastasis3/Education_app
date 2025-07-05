@@ -709,7 +709,7 @@ app.post('/submit-answer/:formId', async (req, res) => {
 const nodemailer = require('nodemailer');
 
 // Настройка email транспорта (замените на ваши настройки)
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
   service: 'gmail', // или другой сервис
   auth: {
     user: 'your-email@gmail.com',
