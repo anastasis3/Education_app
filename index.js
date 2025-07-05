@@ -702,6 +702,251 @@ app.post('/submit-answer/:formId', async (req, res) => {
   }
 });
 
+
+
+// Добавьте эти роуты в ваш основной файл сервера (например, app.js или server.js)
+
+const nodemailer = require('nodemailer');
+
+// Настройка email транспорта (замените на ваши настройки)
+const transporter = nodemailer.createTransporter({
+  service: 'gmail', // или другой сервис
+  auth: {
+    user: 'your-email@gmail.com',
+    pass: 'your-app-password'
+  }
+});
+
+// Роут для просмотра ответов студента и выставления оценки
+app.get('/results/view/:formId/:studentId', async (req, res) => {
+  try {
+    const { formId, studentId } = req.params;
+    
+    // Проверяем, что пользователь - учитель
+    if (!req.session.user || req.session.user.role !== 'teacher') {
+      return res.redirect('/login');
+    }
+
+    // Получаем информацию о форме
+    const formQuery = `
+      SELECT ft.*, u.name as teacher_name 
+      FROM form_templates ft 
+      JOIN users u ON ft.teacher_id = u.id 
+      WHERE ft.id = $1 AND ft.teacher_id = $2
+    `;
+    const formResult = await db.query(formQuery, [formId, req.session.user.id]);
+    
+    if (formResult.rows.length === 0) {
+      return res.status(404).send('Form not found or access denied');
+    }
+
+    const form = formResult.rows[0];
+
+    // Получаем информацию о студенте
+    const studentQuery = `
+      SELECT id, email, name 
+      FROM users 
+      WHERE id = $1 AND role = 'student'
+    `;
+    const studentResult = await db.query(studentQuery, [studentId]);
+    
+    if (studentResult.rows.length === 0) {
+      return res.status(404).send('Student not found');
+    }
+
+    const student = studentResult.rows[0];
+
+    // Получаем все вопросы формы с правильными ответами
+    const questionsQuery = `
+      SELECT id, question_text, question_type, correct_answer, options
+      FROM questions 
+      WHERE form_id = $1 AND is_active = true
+      ORDER BY question_order
+    `;
+    const questionsResult = await db.query(questionsQuery, [formId]);
+    const questions = questionsResult.rows;
+
+    // Получаем ответы студента
+    const answersQuery = `
+      SELECT a.*, q.question_text, q.question_type, q.correct_answer, q.options
+      FROM answers a
+      JOIN questions q ON a.question_id = q.id
+      WHERE a.student_id = $1 AND a.form_id = $2
+      ORDER BY q.question_order
+    `;
+    const answersResult = await db.query(answersQuery, [studentId, formId]);
+    const answers = answersResult.rows;
+
+    // Получаем текущую оценку, если есть
+    const gradeQuery = `
+      SELECT grade, comment
+      FROM grades
+      WHERE student_id = $1 AND form_id = $2 AND teacher_id = $3
+    `;
+    const gradeResult = await db.query(gradeQuery, [studentId, formId, req.session.user.id]);
+    const currentGrade = gradeResult.rows[0] || null;
+
+    // Создаем объединенный массив вопросов с ответами
+    const questionsWithAnswers = questions.map(question => {
+      const studentAnswer = answers.find(a => a.question_id === question.id);
+      return {
+        ...question,
+        student_answer: studentAnswer ? studentAnswer.answer_text : null,
+        selected_options: studentAnswer ? studentAnswer.selected_options : null,
+        file_url: studentAnswer ? studentAnswer.file_url : null,
+        is_correct: checkAnswer(question, studentAnswer)
+      };
+    });
+
+    res.render('grade_student', {
+      form,
+      student,
+      questionsWithAnswers,
+      currentGrade,
+      title: `Grade ${student.name} - ${form.title}`
+    });
+
+  } catch (error) {
+    console.error('Error loading grading page:', error);
+    res.status(500).send('Server error');
+  }
+});
+
+// Роут для сохранения оценки
+app.post('/results/grade', async (req, res) => {
+  try {
+    const { student_id, form_id, grade, comment } = req.body;
+    
+    // Проверяем, что пользователь - учитель
+    if (!req.session.user || req.session.user.role !== 'teacher') {
+      return res.redirect('/login');
+    }
+
+    // Проверяем, что форма принадлежит учителю
+    const formCheckQuery = `
+      SELECT title FROM form_templates 
+      WHERE id = $1 AND teacher_id = $2
+    `;
+    const formCheckResult = await db.query(formCheckQuery, [form_id, req.session.user.id]);
+    
+    if (formCheckResult.rows.length === 0) {
+      return res.status(403).send('Access denied');
+    }
+
+    const formTitle = formCheckResult.rows[0].title;
+
+    // Получаем информацию о студенте
+    const studentQuery = `
+      SELECT email, name FROM users WHERE id = $1
+    `;
+    const studentResult = await db.query(studentQuery, [student_id]);
+    const student = studentResult.rows[0];
+
+    // Сохраняем или обновляем оценку
+    const upsertGradeQuery = `
+      INSERT INTO grades (teacher_id, student_id, form_id, grade, comment)
+      VALUES ($1, $2, $3, $4, $5)
+      ON CONFLICT (teacher_id, student_id, form_id) 
+      DO UPDATE SET 
+        grade = EXCLUDED.grade,
+        comment = EXCLUDED.comment,
+        graded_at = CURRENT_TIMESTAMP
+    `;
+    
+    await db.query(upsertGradeQuery, [
+      req.session.user.id,
+      student_id,
+      form_id,
+      grade,
+      comment || null
+    ]);
+
+    // Отправляем уведомление на почту студенту
+    try {
+      await sendGradeNotification(student.email, student.name, formTitle, grade, comment);
+    } catch (emailError) {
+      console.error('Error sending email:', emailError);
+      // Продолжаем выполнение, даже если email не отправился
+    }
+
+    res.redirect('/results');
+
+  } catch (error) {
+    console.error('Error saving grade:', error);
+    res.status(500).send('Server error');
+  }
+});
+
+// Функция для проверки правильности ответа
+function checkAnswer(question, studentAnswer) {
+  if (!question.correct_answer || !studentAnswer) {
+    return null; // Нет правильного ответа или студент не ответил
+  }
+
+  switch (question.question_type) {
+    case 'radio':
+    case 'dropdown':
+      return studentAnswer.answer_text === question.correct_answer;
+    
+    case 'checkbox':
+      if (!studentAnswer.selected_options) return false;
+      const correctOptions = question.correct_answer.split(',').map(s => s.trim());
+      const studentOptions = studentAnswer.selected_options;
+      
+      return correctOptions.length === studentOptions.length &&
+             correctOptions.every(option => studentOptions.includes(option));
+    
+    case 'short_text':
+      // Простая проверка на точное совпадение (можно улучшить)
+      return studentAnswer.answer_text.toLowerCase().trim() === 
+             question.correct_answer.toLowerCase().trim();
+    
+    case 'file_upload':
+      return null; // Файлы нужно проверять вручную
+    
+    default:
+      return null;
+  }
+}
+
+// Функция для отправки уведомления об оценке
+async function sendGradeNotification(studentEmail, studentName, formTitle, grade, comment) {
+  const subject = `Оценка за тест: ${formTitle}`;
+  
+  let html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #4b4fcf;">Уведомление об оценке</h2>
+      <p>Здравствуйте, ${studentName}!</p>
+      <p>Вы получили оценку за тест: <strong>${formTitle}</strong></p>
+      <div style="background: #f0f4ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="color: #4b4fcf; margin-top: 0;">Ваша оценка: ${grade}/100</h3>
+  `;
+  
+  if (comment) {
+    html += `
+        <p><strong>Комментарий преподавателя:</strong></p>
+        <p style="font-style: italic; color: #666;">${comment}</p>
+    `;
+  }
+  
+  html += `
+      </div>
+      <p style="color: #666; font-size: 14px;">
+        Это автоматическое уведомление. Пожалуйста, не отвечайте на это письмо.
+      </p>
+    </div>
+  `;
+
+  const mailOptions = {
+    from: 'your-email@gmail.com',
+    to: studentEmail,
+    subject: subject,
+    html: html
+  };
+
+  return transporter.sendMail(mailOptions);
+}
+
 // Запуск сервера
 app.listen(port, () => {
   console.log(`🚀 Сервер запущен на порту ${port}`);
