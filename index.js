@@ -469,7 +469,7 @@ const answers = answersResult.rows;
       };
     });
 
-    res.render('grade-student', {
+    res.render('result-view', {
       form,
       student,
       questionsWithAnswers,
@@ -484,63 +484,100 @@ const answers = answersResult.rows;
 });
 
 // ОЦЕНКА КОНКРЕТНОГО ОТВЕТА
-app.post('/results/grade', async (req, res) => {
-  if (!req.session.user) {
-    return res.status(403).send('Access denied');
-  }
-
-  const teacherId = req.session.user.id;
-  const { student_id, form_id, grade, comment } = req.body;
-
+// FIXED ROUTE FOR VIEWING STUDENT RESPONSES AND GRADING
+app.get('/results/view/:formId/:studentId', async (req, res) => {
   try {
-    const formCheck = await pool.query(
-      'SELECT id, title FROM form_templates WHERE id = $1 AND teacher_id = $2',
-      [form_id, teacherId]
-    );
-
-    if (formCheck.rowCount === 0) {
-      return res.status(403).send('Access denied or form not found');
+    const { formId, studentId } = req.params;
+    
+    if (!req.session.user || req.session.user.role !== 'teacher') {
+      return res.redirect('/login');
     }
 
-    const formTitle = formCheck.rows[0].title;
-
-    // Получаем информацию о студенте
-    const studentQuery = `
-      SELECT email, email as name FROM users WHERE id = $1
+    // Get form information
+    const formQuery = `
+      SELECT ft.*, u.email as teacher_name 
+      FROM form_templates ft 
+      JOIN users u ON ft.teacher_id = u.id 
+      WHERE ft.id = $1 AND ft.teacher_id = $2
     `;
-    const studentResult = await pool.query(studentQuery, [student_id]);
+    const formResult = await pool.query(formQuery, [formId, req.session.user.id]);
+    
+    if (formResult.rows.length === 0) {
+      return res.status(404).send('Form not found or access denied');
+    }
+
+    const form = formResult.rows[0];
+
+    // Get student information
+    const studentQuery = `
+      SELECT id, email, email as name 
+      FROM users 
+      WHERE id = $1 AND role = 'student'
+    `;
+    const studentResult = await pool.query(studentQuery, [studentId]);
+    
+    if (studentResult.rows.length === 0) {
+      return res.status(404).send('Student not found');
+    }
+
     const student = studentResult.rows[0];
 
-    const existingGrade = await pool.query(
-      'SELECT id FROM grades WHERE teacher_id = $1 AND student_id = $2 AND form_id = $3',
-      [teacherId, student_id, form_id]
-    );
+    // Get all form questions
+    const questionsQuery = `
+      SELECT id, question_text, question_type, question_order
+      FROM questions 
+      WHERE form_id = $1 AND is_active = true
+      ORDER BY question_order
+    `;
+    const questionsResult = await pool.query(questionsQuery, [formId]);
+    const questions = questionsResult.rows;
 
-    if (existingGrade.rowCount > 0) {
-      await pool.query(
-        `UPDATE grades SET grade = $1, comment = $2, graded_at = NOW() WHERE id = $3`,
-        [grade, comment, existingGrade.rows[0].id]
-      );
-    } else {
-      await pool.query(
-        `INSERT INTO grades (teacher_id, student_id, form_id, grade, comment) VALUES ($1, $2, $3, $4, $5)`,
-        [teacherId, student_id, form_id, grade, comment]
-      );
-    }
+    // Get student answers - FIXED QUERY
+    const answersQuery = `
+      SELECT a.id, a.answer_text, a.question_id, a.response_id,
+             q.question_text, q.question_type, q.question_order
+      FROM answers a
+      JOIN questions q ON a.question_id = q.id
+      JOIN form_responses fr ON a.response_id = fr.id
+      WHERE fr.user_id = $1 AND fr.form_id = $2
+      ORDER BY q.question_order
+    `;
+    const answersResult = await pool.query(answersQuery, [studentId, formId]);
+    const answers = answersResult.rows;
 
-    // Отправляем уведомление на почту
-    try {
-      await sendGradeNotification(student.email, student.name, formTitle, grade, comment);
-    } catch (emailError) {
-      console.error('Error sending email:', emailError);
-    }
+    // Get current grade
+    const gradeQuery = `
+      SELECT grade, comment
+      FROM grades
+      WHERE student_id = $1 AND form_id = $2 AND teacher_id = $3
+    `;
+    const gradeResult = await pool.query(gradeQuery, [studentId, formId, req.session.user.id]);
+    const currentGrade = gradeResult.rows[0] || null;
 
-    res.redirect(`/results/${form_id}`);
-  } catch (err) {
-    console.error(err);
+    // Create combined array of questions with answers
+    const questionsWithAnswers = questions.map(question => {
+      const studentAnswer = answers.find(a => a.question_id === question.id);
+      return {
+        ...question,
+        student_answer: studentAnswer ? studentAnswer.answer_text : null,
+        answer_id: studentAnswer ? studentAnswer.id : null
+      };
+    });
+
+    res.render('result-view', {
+      form,
+      student,
+      questionsWithAnswers,
+      currentGrade,
+      user: req.session.user
+    });
+
+  } catch (error) {
+    console.error('Error loading grading page:', error);
     res.status(500).send('Server error');
   }
 });
+
 
 // Роут для выбора формы для просмотра результатов
 app.get('/select-form-results', async (req, res) => {
