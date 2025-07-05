@@ -471,7 +471,7 @@ app.get('/results/view/:formId/:studentId', async (req, res) => {
 
         res.render('result-view', { // Change 'grade-student' to 'result-view' if that's the intention
             form: form,
-            studentId: student.id, // Pass student.id as studentId
+            studentId: studentId, // Pass student.id as studentId
             answers: answers, // Pass the fetched answers array
             grade: currentGrade, // Pass the fetched grade object
             user: req.session.user
