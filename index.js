@@ -440,7 +440,7 @@ app.get('/results/view/:formId/:studentId', async (req, res) => {
     // Получаем ответы студента
     const answersQuery = `
       SELECT ar.*, q.question_text, q.question_type, q.question_order
-      FROM answer ar
+      FROM answers ar
       JOIN questions q ON ar.question_id = q.id
       JOIN form_responses fr ON ar.response_id = fr.id
       WHERE fr.user_id = $1 AND fr.form_id = $2
@@ -682,7 +682,7 @@ app.post('/submit-answer/:formId', async (req, res) => {
         }
 
         await pool.query(
-          'INSERT INTO answer (response_id, question_id, answer_text) VALUES ($1, $2, $3)',
+          'INSERT INTO answers (response_id, question_id, answer_text) VALUES ($1, $2, $3)',
           [responseId, question.id, answerValue]
         );
       }
