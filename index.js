@@ -682,7 +682,7 @@ app.post('/submit-answer/:formId', async (req, res) => {
         }
 
         await pool.query(
-          'INSERT INTO answer_responses (response_id, question_id, answer_text) VALUES ($1, $2, $3)',
+          'INSERT INTO answer (response_id, question_id, answer_text) VALUES ($1, $2, $3)',
           [responseId, question.id, answerValue]
         );
       }
@@ -725,7 +725,7 @@ async function sendGradeNotification(studentEmail, studentName, formTitle, grade
   `;
 
   const mailOptions = {
-    from: process.env.EMAIL_USER || 'your-email@gmail.com',
+    from: process.env.EMAIL_USER || 'anastacua3a@gmail.com',
     to: studentEmail,
     subject: subject,
     html: html
