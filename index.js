@@ -438,16 +438,17 @@ app.get('/results/view/:formId/:studentId', async (req, res) => {
     const questions = questionsResult.rows;
 
     // Получаем ответы студента
-    const answersQuery = `
-      SELECT ar.*, q.question_text, q.question_type, q.question_order
-      FROM answers ar
-      JOIN questions q ON ar.question_id = q.id
-      JOIN form_responses fr ON ar.response_id = fr.id
-      WHERE fr.user_id = $1 AND fr.form_id = $2
-      ORDER BY q.question_order
-    `;
-    const answersResult = await pool.query(answersQuery, [studentId, formId]);
-    const answers = answersResult.rows;
+// Исправленный запрос для получения ответов студента
+const answersQuery = `
+  SELECT a.*, q.question_text, q.question_type, q.question_order
+  FROM answers a
+  JOIN questions q ON a.question_id = q.id
+  JOIN form_responses fr ON a.response_id = fr.id
+  WHERE fr.user_id = $1 AND fr.form_id = $2
+  ORDER BY q.question_order
+`;
+const answersResult = await pool.query(answersQuery, [studentId, formId]);
+const answers = answersResult.rows;
 
     // Получаем текущую оценку
     const gradeQuery = `
