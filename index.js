@@ -471,11 +471,12 @@ const answers = answersResult.rows;
 
     res.render('result-view', {
       form,
-      student,
+      studentId: student.id, 
       questionsWithAnswers,
       currentGrade,
       user: req.session.user
-    });
+});
+
 
   } catch (error) {
     console.error('Error loading grading page:', error);
@@ -564,14 +565,13 @@ app.get('/results/view/:formId/:studentId', async (req, res) => {
       };
     });
 
-res.render('result-view', {
-  form,
-  studentId: student.id, // Make sure to pass studentId
-  questionsWithAnswers,
-  currentGrade,
-  user: req.session.user
-});
-
+    res.render('grade-student', {
+      form,
+      student,
+      questionsWithAnswers,
+      currentGrade,
+      user: req.session.user
+    });
 
   } catch (error) {
     console.error('Error loading grading page:', error);
