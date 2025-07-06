@@ -700,7 +700,6 @@ async function sendGradeNotification(studentEmail, studentName, formTitle, grade
 }
 
 
-// Добавьте этот роут в ваш основной файл приложения (app.js, server.js или index.js)
 // Роут для сохранения оценки
 app.post('/results/grade', async (req, res) => {
   console.log('POST /results/grade called');
@@ -715,7 +714,7 @@ app.post('/results/grade', async (req, res) => {
 
   try {
     // Проверяем, что все необходимые данные присутствуют
-    if (!student_id || !form_id || grade === undefined || grade === null) {
+    if (!student_id || !form_id || form_id === '' || grade === undefined || grade === null) {
       console.log('Missing required fields:', { student_id, form_id, grade });
       return res.status(400).send('Не все данные заполнены');
     }
@@ -729,29 +728,23 @@ app.post('/results/grade', async (req, res) => {
 
     console.log('Saving grade:', { teacher_id, student_id, form_id, grade: gradeNum, comment });
 
-    // Проверяем, существует ли уже оценка для этого студента и формы
-    const existingGrade = await pool.query(
-      'SELECT id FROM grades WHERE teacher_id = $1 AND student_id = $2 AND form_id = $3',
-      [teacher_id, student_id, form_id]
-    );
+    // Используем UPSERT (INSERT ... ON CONFLICT) для обработки уникального ограничения
+    console.log('Executing UPSERT query...');
+    const upsertResult = await pool.query(`
+      INSERT INTO grades (teacher_id, student_id, form_id, grade, comment, graded_at)
+      VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+      ON CONFLICT (teacher_id, student_id, form_id)
+      DO UPDATE SET 
+        grade = EXCLUDED.grade,
+        comment = EXCLUDED.comment,
+        graded_at = CURRENT_TIMESTAMP
+      RETURNING id, grade, comment
+    `, [teacher_id, student_id, form_id, gradeNum, comment || '']);
 
-    if (existingGrade.rowCount > 0) {
-      // Обновляем существующую оценку
-      await pool.query(
-        'UPDATE grades SET grade = $1, comment = $2, graded_at = CURRENT_TIMESTAMP WHERE teacher_id = $3 AND student_id = $4 AND form_id = $5',
-        [gradeNum, comment || '', teacher_id, student_id, form_id]
-      );
-      console.log('Grade updated successfully');
-    } else {
-      // Создаем новую оценку
-      await pool.query(
-        'INSERT INTO grades (teacher_id, student_id, form_id, grade, comment) VALUES ($1, $2, $3, $4, $5)',
-        [teacher_id, student_id, form_id, gradeNum, comment || '']
-      );
-      console.log('New grade created successfully');
-    }
+    console.log('UPSERT successful:', upsertResult.rows[0]);
 
     // Получаем данные студента и формы для отправки уведомления
+    console.log('Getting student and form data...');
     const studentData = await pool.query(
       'SELECT email, name FROM users WHERE id = $1',
       [student_id]
@@ -770,6 +763,7 @@ app.post('/results/grade', async (req, res) => {
       try {
         // Проверяем, настроен ли transporter для email
         if (typeof transporter !== 'undefined' && transporter) {
+          console.log('Sending email notification...');
           await sendGradeNotification(
             student.email,
             student.name || student.email,
@@ -787,14 +781,92 @@ app.post('/results/grade', async (req, res) => {
       }
     }
 
+    console.log('Redirecting to results page...');
     // Перенаправляем обратно на страницу результатов с сообщением об успехе
     res.redirect(`/results/view/${form_id}/${student_id}?message=Оценка успешно сохранена`);
 
   } catch (err) {
     console.error('Ошибка при сохранении оценки:', err);
+    console.error('Error details:', {
+      message: err.message,
+      code: err.code,
+      detail: err.detail,
+      hint: err.hint
+    });
+
+    // Специальная обработка ошибки уникального ограничения
+    if (err.code === '23505') { // Violation of unique constraint
+      console.log('Unique constraint violation, trying alternative approach...');
+      
+      // Попробуем обновить существующую запись
+      try {
+        const updateResult = await pool.query(`
+          UPDATE grades 
+          SET grade = $1, comment = $2, graded_at = CURRENT_TIMESTAMP 
+          WHERE teacher_id = $3 AND student_id = $4 AND form_id = $5
+          RETURNING id
+        `, [gradeNum, comment || '', teacher_id, student_id, form_id]);
+
+        if (updateResult.rowCount > 0) {
+          console.log('Grade updated successfully via fallback method');
+          return res.redirect(`/results/view/${form_id}/${student_id}?message=Оценка успешно обновлена`);
+        } else {
+          console.log('No existing grade found to update');
+          return res.status(500).send('Не удалось сохранить оценку');
+        }
+      } catch (updateErr) {
+        console.error('Fallback update also failed:', updateErr);
+        return res.status(500).send('Ошибка при обновлении оценки');
+      }
+    }
+
     res.status(500).send('Ошибка сервера при сохранении оценки');
   }
 });
+
+// Функция для отправки уведомления об оценке
+async function sendGradeNotification(studentEmail, studentName, formTitle, grade, comment) {
+  // Проверяем, настроен ли transporter
+  if (typeof transporter === 'undefined' || !transporter) {
+    console.log('Email transporter not configured');
+    return;
+  }
+
+  const subject = `Оценка за тест: ${formTitle}`;
+  
+  let html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #4b4fcf;">Уведомление об оценке</h2>
+      <p>Здравствуйте, ${studentName}!</p>
+      <p>Вы получили оценку за тест: <strong>${formTitle}</strong></p>
+      <div style="background: #f0f4ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="color: #4b4fcf; margin-top: 0;">Ваша оценка: ${grade}/100</h3>
+  `;
+  
+  if (comment && comment.trim()) {
+    html += `
+        <p><strong>Комментарий преподавателя:</strong></p>
+        <p style="font-style: italic; color: #666;">${comment}</p>
+    `;
+  }
+  
+  html += `
+      </div>
+      <p style="color: #666; font-size: 14px;">
+        Это автоматическое уведомление. Пожалуйста, не отвечайте на это письмо.
+      </p>
+    </div>
+  `;
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER || 'anastacua3a@gmail.com',
+    to: studentEmail,
+    subject: subject,
+    html: html
+  };
+
+  return transporter.sendMail(mailOptions);
+}
 
 // Функция для отправки уведомления об оценке (добавьте, если у вас её нет)
 async function sendGradeNotification(studentEmail, studentName, formTitle, grade, comment) {
