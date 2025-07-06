@@ -46,22 +46,21 @@
       margin-bottom: 0.5rem;
       font-size: 1.1rem;
     }
-    
-        .back-link {
-  display: inline-block;
-  margin-bottom: 2rem;
-  padding: 0.5rem 1rem;
-  background: #e9ecef;
-  border-radius: 6px;
-  color: #495057 !important;
-  text-decoration: none;
-  font-weight: 600;
-}
+    .back-link {
+      display: inline-block;
+      margin-bottom: 2rem;
+      padding: 0.5rem 1rem;
+      background: #e9ecef;
+      border-radius: 6px;
+      color: #495057 !important;
+      text-decoration: none;
+      font-weight: 600;
+      transition: background-color 0.3s ease;
+    }
 
-.back-link:hover {
-  background: #dee2e6;
-}
-    
+    .back-link:hover {
+      background: #dee2e6;
+    }
     .no-questions {
       text-align: center;
       padding: 2rem;
@@ -71,8 +70,7 @@
   </style>
 </head>
 <body>
-  <a href="/forms" class="back-link">← Back to forms</a>
-  
+  <a href="/dashboard" class="back-link">← Back to Dashboard</a>
   <div class="header">
     <h1><%= form.title %></h1>
     <p>Form Preview</p>
