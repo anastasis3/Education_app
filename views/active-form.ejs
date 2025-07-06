@@ -10,14 +10,17 @@
       color: #2c3e50; 
       margin: 0;
       padding: 2rem;
-      line-height: 1.6;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      align-items: center;
     }
 
-    .container {
+    main {
       max-width: 800px;
-      margin: 0 auto;
+      width: 100%;
       background: #ffffff; 
-      padding: 2rem;
+      padding: 2rem 2.5rem;
       border-radius: 8px;
       box-shadow: 0 1px 4px rgba(44, 62, 80, 0.1); 
     }
@@ -128,26 +131,27 @@
     }
 
     .back-link {
-  display: inline-block;
-  margin-bottom: 2rem;
-  padding: 0.5rem 1rem;
-  background: #e9ecef;
-  border-radius: 6px;
-  color: #495057 !important;
-  text-decoration: none;
-  font-weight: 600;
-}
+      display: inline-block;
+      margin-bottom: 2rem;
+      padding: 0.5rem 1rem;
+      background: linear-gradient(90deg, #7b68ee, #4169e1);
+      color: #ecf0f1 !important;
+      text-decoration: none;
+      font-weight: 600;
+      border-radius: 6px;
+      transition: background 0.3s ease;
+      user-select: none;
+    }
 
-.back-link:hover {
-  background: #dee2e6;
-}
-
+    .back-link:hover {
+      background: linear-gradient(90deg, #4169e1, #7b68ee);
+    }
   </style>
 </head>
 <body>
-  <div class="container">
+  <main>
     <a href="/dashboard" class="back-link">← Back to Dashboard</a>
-    
+
     <h1>Active Forms</h1>
 
     <% if (message) { %>
@@ -165,7 +169,7 @@
         <div class="form-container">
           <h2><%= form.title %></h2>
           
-          <form method="POST" action="/submit-answer/<%= form.id %>">
+          <form method="POST" action="/submit-answer/<%= form.id %>" enctype="multipart/form-data">
             <% form.questions.forEach((question, questionIndex) => { %>
               <div class="question-block">
                 <h3>Question <%= questionIndex + 1 %>: <%= question.question_text %></h3>
@@ -224,6 +228,6 @@
         </div>
       <% }) %>
     <% } %>
-  </div>
+  </main>
 </body>
 </html>
