@@ -5,16 +5,19 @@
   <title>Edit Form - <%= form.title %></title>
   <style>
     body {
-      font-family: 'Segoe UI', sans-serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background: #f9faff;
-      color: #333;
+      color: #2c3e50;
       max-width: 800px;
       margin: 2rem auto;
       padding: 2rem;
     }
 
     h1 {
-      color: #4b4fcf;
+      color: #34495e;
+      font-weight: 600;
+      font-size: 1.7rem;
+      margin-bottom: 1.5rem;
     }
 
     form {
@@ -34,7 +37,8 @@
       font-weight: 500;
     }
 
-    input[type="text"] {
+    input[type="text"],
+    select {
       width: 100%;
       padding: 0.5rem;
       margin-top: 0.5rem;
@@ -62,27 +66,33 @@
     button:hover {
       background: #5a4fcf;
     }
-    .back-link {
-  display: inline-block;
-  margin-bottom: 2rem;
-  padding: 0.5rem 1rem;
-  background: #e9ecef;
-  border-radius: 6px;
-  color: #495057 !important;
-  text-decoration: none;
-  font-weight: 600;
-}
 
-.back-link:hover {
-  background: #dee2e6;
-}
+    .back-button {
+      display: block;
+      width: 100%;
+      padding: 0.7rem 1rem;
+      background: linear-gradient(90deg, #7b68ee, #4169e1);
+      color: #ecf0f1;
+      font-weight: 600;
+      font-size: 1rem;
+      border-radius: 6px;
+      text-decoration: none;
+      text-align: center;
+      transition: background-color 0.3s ease;
+      margin-top: 1rem;
+    }
 
+    .back-button:hover,
+    .back-button:focus {
+      background: linear-gradient(90deg, #4169e1 , #7b68ee);
+      outline: none;
+    }
   </style>
 </head>
 <body>
   <h1>Edit Form</h1>
-    <a href="/dashboard" class="back-link">Back to dashboard</a><br><br>
- <form action="/edit-form/<%= form.id %>" method="POST">
+
+  <form action="/edit-form/<%= form.id %>" method="POST">
     <label for="title">Title:</label>
     <input
       type="text"
@@ -115,12 +125,11 @@
         </select>
 
         <div id="options_<%= i + 1 %>" class="options-container" style="display:<%= question.question_type === 'radio' || question.question_type === 'checkbox' || question.question_type === 'dropdown' ? 'block' : 'none' %>;">
-            <% if (question.options && Array.isArray(question.options)) { %>
+          <% if (question.options && Array.isArray(question.options)) { %>
             <% question.options.forEach((option, j) => { %>
-                <input type="text" name="option_<%= i + 1 %>_<%= j + 1 %>" value="<%= option %>" />
+              <input type="text" name="option_<%= i + 1 %>_<%= j + 1 %>" value="<%= option %>" />
             <% }); %>
-            <% } %>
-
+          <% } %>
         </div>
 
         <label for="correct_answer_<%= i + 1 %>">Correct Answer:</label>
@@ -130,7 +139,7 @@
 
     <button type="submit">Save Changes</button>
   </form>
-  <br>
-  <a href="/forms">Back to My Forms</a>
+
+  <a href="/forms" class="back-button">← Back to My Forms</a>
 </body>
 </html>
