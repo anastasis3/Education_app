@@ -892,7 +892,7 @@ app.get('/grades', async (req, res) => {
       ORDER BY g.graded_at DESC
     `, [studentId]);
 
-    res.render('my-grades', { 
+    res.render('grades', { 
       grades: gradesResult.rows,
       user: req.session.user
     });
