@@ -5,7 +5,7 @@
   <title>Results for <%= form.title %> - Student <%= studentId %></title>
   <style>
     body {
-      font-family: 'Segoe UI', sans-serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       max-width: 800px;
       margin: 2rem auto;
       padding: 2rem;
@@ -50,12 +50,27 @@
     button:hover {
       background-color: #3a3fc0;
     }
-    a {
-      color: #4169e1;
-      text-decoration: none;
-      font-weight: 600;
+    a.back-link {
       display: inline-block;
-      margin-bottom: 1rem;
+      margin-bottom: 2rem;
+      padding: 0.7rem 1.2rem;
+      background: linear-gradient(90deg, #7b68ee, #4169e1);
+      color: #ecf0f1 !important;
+      font-weight: 600;
+      font-size: 1rem;
+      border-radius: 6px;
+      text-decoration: none;
+      text-align: center;
+      user-select: none;
+      box-shadow: none;
+      border: none;
+      transition: background-color 0.3s ease;
+    }
+    a.back-link:hover,
+    a.back-link:focus {
+      background: linear-gradient(90deg, #4169e1 , #7b68ee);
+      outline: none;
+      cursor: pointer;
     }
     .success-message {
       background: #d4edda;
@@ -73,24 +88,12 @@
       margin-bottom: 1rem;
       border: 1px solid #f5c6cb;
     }
-        .back-link {
-  display: inline-block;
-  margin-bottom: 2rem;
-  padding: 0.5rem 1rem;
-  background: #e9ecef;
-  border-radius: 6px;
-  color: #495057 !important;
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.back-link:hover {
-  background: #dee2e6;
-}
   </style>
 </head>
 <body>
+
   <a href="/results" class="back-link">← Back to results list</a>
+  
   <h1>Results for: <%= form.title %></h1>
   <h3>Student ID: <%= studentId %></h3>
 
