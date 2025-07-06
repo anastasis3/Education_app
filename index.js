@@ -746,7 +746,7 @@ app.post('/results/grade', async (req, res) => {
     // Получаем данные студента и формы для отправки уведомления
     console.log('Getting student and form data...');
     const studentData = await pool.query(
-      'SELECT email, name FROM users WHERE id = $1',
+      'SELECT email FROM users WHERE id = $1',
       [student_id]
     );
 
@@ -837,7 +837,7 @@ async function sendGradeNotification(studentEmail, studentName, formTitle, grade
   let html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #4b4fcf;">Уведомление об оценке</h2>
-      <p>Здравствуйте, ${studentName}!</p>
+      <p>Здравствуйте!</p>
       <p>Вы получили оценку за тест: <strong>${formTitle}</strong></p>
       <div style="background: #f0f4ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
         <h3 style="color: #4b4fcf; margin-top: 0;">Ваша оценка: ${grade}/100</h3>
@@ -859,7 +859,7 @@ async function sendGradeNotification(studentEmail, studentName, formTitle, grade
   `;
 
   const mailOptions = {
-    from: process.env.EMAIL_USER || 'anastacua3a@gmail.com',
+    from: process.env.EMAIL_USER || 'anastacia3a@gmail.com',
     to: studentEmail,
     subject: subject,
     html: html
@@ -868,49 +868,6 @@ async function sendGradeNotification(studentEmail, studentName, formTitle, grade
   return transporter.sendMail(mailOptions);
 }
 
-// Функция для отправки уведомления об оценке (добавьте, если у вас её нет)
-async function sendGradeNotification(studentEmail, studentName, formTitle, grade, comment) {
-  // Проверяем, настроен ли transporter
-  if (typeof transporter === 'undefined' || !transporter) {
-    console.log('Email transporter not configured');
-    return;
-  }
-
-  const subject = `Оценка за тест: ${formTitle}`;
-  
-  let html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #4b4fcf;">Уведомление об оценке</h2>
-      <p>Здравствуйте, ${studentName}!</p>
-      <p>Вы получили оценку за тест: <strong>${formTitle}</strong></p>
-      <div style="background: #f0f4ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <h3 style="color: #4b4fcf; margin-top: 0;">Ваша оценка: ${grade}/100</h3>
-  `;
-  
-  if (comment && comment.trim()) {
-    html += `
-        <p><strong>Комментарий преподавателя:</strong></p>
-        <p style="font-style: italic; color: #666;">${comment}</p>
-    `;
-  }
-  
-  html += `
-      </div>
-      <p style="color: #666; font-size: 14px;">
-        Это автоматическое уведомление. Пожалуйста, не отвечайте на это письмо.
-      </p>
-    </div>
-  `;
-
-  const mailOptions = {
-    from: process.env.EMAIL_USER || 'anastacua3a@gmail.com',
-    to: studentEmail,
-    subject: subject,
-    html: html
-  };
-
-  return transporter.sendMail(mailOptions);
-}
 
 // Роут для студентов, чтобы они могли посмотреть свои оценки
 app.get('/my-grades', async (req, res) => {
