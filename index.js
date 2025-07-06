@@ -870,7 +870,7 @@ async function sendGradeNotification(studentEmail, studentName, formTitle, grade
 
 
 // Роут для студентов, чтобы они могли посмотреть свои оценки
-app.get('/my-grades', async (req, res) => {
+app.get('/grades', async (req, res) => {
   if (!req.session.user || req.session.user.role !== 'student') {
     return res.status(403).send('Доступ запрещён. Только для студентов.');
   }
