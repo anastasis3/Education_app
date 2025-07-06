@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Мои оценки</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      max-width: 1000px;
+      margin: 2rem auto;
+      padding: 2rem;
+      background: #f9faff;
+      color: #333;
+    }
+    h1 {
+      color: #4b4fcf;
+      text-align: center;
+    }
+    .grade-card {
+      background: white;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      border-left: 4px solid #4b4fcf;
+    }
+    .grade-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .form-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #333;
+    }
+    .grade-score {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #4b4fcf;
+      background: #f0f4ff;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+    }
+    .teacher-info {
+      color: #666;
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+    }
+    .graded-date {
+      color: #888;
+      font-size: 0.8rem;
+    }
+    .comment {
+      background: #f8f9fa;
+      padding: 1rem;
+      border-radius: 4px;
+      margin-top: 1rem;
+      border-left: 3px solid #28a745;
+    }
+    .comment-label {
+      font-weight: 600;
+      color: #28a745;
+      margin-bottom: 0.5rem;
+    }
+    .no-grades {
+      text-align: center;
+      color: #666;
+      font-size: 1.1rem;
+      margin-top: 3rem;
+    }
+    .back-link {
+      display: inline-block;
+      margin-bottom: 1rem;
+      color: #4b4fcf;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .back-link:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <a href="/dashboard" class="back-link">← Назад к панели управления</a>
+  
+  <h1>Мои оценки</h1>
+  
+  <% if (grades.length === 0) { %>
+    <div class="no-grades">
+      <p>У вас пока нет оценок.</p>
+    </div>
+  <% } else { %>
+    <% grades.forEach(grade => { %>
+      <div class="grade-card">
+        <div class="grade-header">
+          <div class="form-title"><%= grade.form_title %></div>
+          <div class="grade-score"><%= grade.grade %>/100</div>
+        </div>
+        
+        <div class="teacher-info">
+          Преподаватель: <%= grade.teacher_name || 'Неизвестно' %>
+        </div>
+        
+        <div class="graded-date">
+          Оценено: <%= new Date(grade.graded_at).toLocaleDateString('ru-RU', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          }) %>
+        </div>
+        
+        <% if (grade.comment && grade.comment.trim() !== '') { %>
+          <div class="comment">
+            <div class="comment-label">Комментарий преподавателя:</div>
+            <div><%= grade.comment %></div>
+          </div>
+        <% } %>
+      </div>
+    <% }) %>
+  <% } %>
+</body>
+</html>

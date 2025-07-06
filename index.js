@@ -695,8 +695,90 @@ async function sendGradeNotification(studentEmail, studentName, formTitle, grade
     html: html
   };
 
+  // Предполагаем, что у вас есть настроенный transporter для nodemailer
   return transporter.sendMail(mailOptions);
 }
+
+
+app.post('/results/grade', async (req, res) => {
+  if (!req.session.user || req.session.user.role !== 'teacher') {
+    return res.status(403).send('Доступ запрещён. Только для преподавателей.');
+  }
+
+  const { student_id, form_id, grade, comment } = req.body;
+  const teacher_id = req.session.user.id;
+
+  try {
+    // Проверяем, что все необходимые данные присутствуют
+    if (!student_id || !form_id || grade === undefined || grade === null) {
+      return res.status(400).send('Не все данные заполнены');
+    }
+
+    // Проверяем, что оценка в допустимом диапазоне
+    if (grade < 0 || grade > 100) {
+      return res.status(400).send('Оценка должна быть от 0 до 100');
+    }
+
+    // Проверяем, существует ли уже оценка для этого студента и формы
+    const existingGrade = await pool.query(
+      'SELECT id FROM grades WHERE teacher_id = $1 AND student_id = $2 AND form_id = $3',
+      [teacher_id, student_id, form_id]
+    );
+
+    if (existingGrade.rowCount > 0) {
+      // Обновляем существующую оценку
+      await pool.query(
+        'UPDATE grades SET grade = $1, comment = $2, graded_at = CURRENT_TIMESTAMP WHERE teacher_id = $3 AND student_id = $4 AND form_id = $5',
+        [grade, comment || '', teacher_id, student_id, form_id]
+      );
+    } else {
+      // Создаем новую оценку
+      await pool.query(
+        'INSERT INTO grades (teacher_id, student_id, form_id, grade, comment) VALUES ($1, $2, $3, $4, $5)',
+        [teacher_id, student_id, form_id, grade, comment || '']
+      );
+    }
+
+    // Получаем данные студента и формы для отправки уведомления
+    const studentData = await pool.query(
+      'SELECT email, name FROM users WHERE id = $1',
+      [student_id]
+    );
+
+    const formData = await pool.query(
+      'SELECT title FROM form_templates WHERE id = $1',
+      [form_id]
+    );
+
+    if (studentData.rowCount > 0 && formData.rowCount > 0) {
+      const student = studentData.rows[0];
+      const form = formData.rows[0];
+
+      // Отправляем уведомление студенту
+      try {
+        await sendGradeNotification(
+          student.email,
+          student.name || student.email,
+          form.title,
+          grade,
+          comment
+        );
+        console.log(`Уведомление об оценке отправлено студенту ${student.email}`);
+      } catch (emailError) {
+        console.error('Ошибка при отправке уведомления:', emailError);
+        // Не останавливаем процесс, если не удалось отправить email
+      }
+    }
+
+    // Перенаправляем обратно на страницу результатов с сообщением об успехе
+    res.redirect(`/results/${form_id}/${student_id}?message=Оценка успешно сохранена`);
+
+  } catch (err) {
+    console.error('Ошибка при сохранении оценки:', err);
+    res.status(500).send('Ошибка сервера при сохранении оценки');
+  }
+});
+
 
 // Запуск сервера
 app.listen(port, () => {
