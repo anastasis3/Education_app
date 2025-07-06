@@ -73,10 +73,24 @@
       margin-bottom: 1rem;
       border: 1px solid #f5c6cb;
     }
+        .back-link {
+  display: inline-block;
+  margin-bottom: 2rem;
+  padding: 0.5rem 1rem;
+  background: #e9ecef;
+  border-radius: 6px;
+  color: #495057 !important;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.back-link:hover {
+  background: #dee2e6;
+}
   </style>
 </head>
 <body>
-  <a href="/results">← Back to results list</a>
+  <a href="/results" class="back-link">← Back to results list</a>
   <h1>Results for: <%= form.title %></h1>
   <h3>Student ID: <%= studentId %></h3>
 
@@ -103,7 +117,6 @@
 
   <form action="/results/grade" method="POST">
     <input type="hidden" name="student_id" value="<%= studentId %>">
-    <!-- ИСПРАВЛЕНО: используем form.id вместо form.form_id -->
     <input type="hidden" name="form_id" value="<%= form.id %>">
 
     <label for="grade">Grade (0-100):</label>
@@ -114,14 +127,5 @@
 
     <button type="submit">Save Grade</button>
   </form>
-
-  <!-- Отладочная информация (можно удалить после исправления) -->
-  <script>
-    console.log('Debug info:', {
-      formId: '<%= form.id %>',
-      studentId: '<%= studentId %>',
-      formTitle: '<%= form.title %>'
-    });
-  </script>
 </body>
 </html>

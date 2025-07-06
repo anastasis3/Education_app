@@ -7,7 +7,7 @@
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background-color: #f5f7fa;
-      color: #2c3e50;
+      color: #2c3e50; 
       margin: 0;
       padding: 2rem;
       line-height: 1.6;
@@ -16,22 +16,22 @@
     .container {
       max-width: 800px;
       margin: 0 auto;
-      background: #ffffff;
+      background: #ffffff; 
       padding: 2rem;
       border-radius: 8px;
-      box-shadow: 0 1px 4px rgba(44, 62, 80, 0.1);
+      box-shadow: 0 1px 4px rgba(44, 62, 80, 0.1); 
     }
 
     h1 {
       font-weight: 600;
       font-size: 1.8rem;
       margin-bottom: 1.5rem;
-      color: #34495e;
+      color: #34495e; 
       text-align: center;
     }
 
     h2 {
-      color: #4a6fa5;
+      color: #4a6fa5; 
       font-weight: 600;
       margin-top: 2rem;
       margin-bottom: 1rem;
@@ -63,9 +63,9 @@
       border: 1px solid #e1e8ed;
     }
 
-    input[type="text"],
-    input[type="file"],
-    select,
+    input[type="text"], 
+    input[type="file"], 
+    select, 
     textarea {
       width: 100%;
       padding: 0.6rem;
@@ -76,20 +76,19 @@
       box-sizing: border-box;
     }
 
-    .radio-option,
-    .checkbox-option {
+    .radio-option, .checkbox-option {
       margin-bottom: 0.8rem;
       display: flex;
       align-items: center;
     }
 
-    .radio-option input[type="radio"],
+    .radio-option input[type="radio"], 
     .checkbox-option input[type="checkbox"] {
       margin-right: 0.5rem;
       width: auto;
     }
 
-    .radio-option label,
+    .radio-option label, 
     .checkbox-option label {
       cursor: pointer;
       padding: 0.3rem 0;
@@ -129,25 +128,26 @@
     }
 
     .back-link {
-      display: inline-block;
-      margin-bottom: 1rem;
-      padding: 0.5rem 1rem;
-      background: #6c757d;
-      color: #ffffff;
-      text-decoration: none;
-      border-radius: 4px;
-      font-weight: 600;
-    }
+  display: inline-block;
+  margin-bottom: 2rem;
+  padding: 0.5rem 1rem;
+  background: #e9ecef;
+  border-radius: 6px;
+  color: #495057 !important;
+  text-decoration: none;
+  font-weight: 600;
+}
 
-    .back-link:hover {
-      background: #5a6268;
-    }
+.back-link:hover {
+  background: #dee2e6;
+}
+
   </style>
 </head>
 <body>
   <div class="container">
     <a href="/dashboard" class="back-link">← Back to Dashboard</a>
-
+    
     <h1>Active Forms</h1>
 
     <% if (message) { %>
@@ -164,61 +164,61 @@
       <% forms.forEach((form, formIndex) => { %>
         <div class="form-container">
           <h2><%= form.title %></h2>
-
+          
           <form method="POST" action="/submit-answer/<%= form.id %>">
             <% form.questions.forEach((question, questionIndex) => { %>
               <div class="question-block">
                 <h3>Question <%= questionIndex + 1 %>: <%= question.question_text %></h3>
-
+                
                 <% if (question.question_type === 'short_text') { %>
-                  <input type="text"
-                         name="answer_<%= questionIndex %>"
+                  <input type="text" 
+                         name="answer_<%= questionIndex %>" 
                          placeholder="Enter your answer"
-                         required />
-
+                         required>
+                
                 <% } else if (question.question_type === 'long_text') { %>
-                  <textarea name="answer_<%= questionIndex %>"
+                  <textarea name="answer_<%= questionIndex %>" 
                             placeholder="Enter your detailed answer"
                             rows="4"
                             required></textarea>
-
+                
                 <% } else if (question.question_type === 'radio') { %>
                   <% question.options.forEach((option, optionIndex) => { %>
                     <div class="radio-option">
-                      <input type="radio"
-                             name="answer_<%= questionIndex %>"
-                             value="<%= option %>"
+                      <input type="radio" 
+                             name="answer_<%= questionIndex %>" 
+                             value="<%= option %>" 
                              id="q<%= questionIndex %>_opt<%= optionIndex %>"
-                             required />
+                             required>
                       <label for="q<%= questionIndex %>_opt<%= optionIndex %>"><%= option %></label>
                     </div>
                   <% }) %>
-
+                
                 <% } else if (question.question_type === 'checkbox') { %>
                   <% question.options.forEach((option, optionIndex) => { %>
                     <div class="checkbox-option">
-                      <input type="checkbox"
-                             name="answer_<%= questionIndex %>"
-                             value="<%= option %>"
-                             id="q<%= questionIndex %>_chk<%= optionIndex %>" />
+                      <input type="checkbox" 
+                             name="answer_<%= questionIndex %>" 
+                             value="<%= option %>" 
+                             id="q<%= questionIndex %>_chk<%= optionIndex %>">
                       <label for="q<%= questionIndex %>_chk<%= optionIndex %>"><%= option %></label>
                     </div>
                   <% }) %>
-
+                
                 <% } else if (question.question_type === 'dropdown') { %>
                   <select name="answer_<%= questionIndex %>" required>
                     <option value="">Select an option</option>
-                    <% question.options.forEach(option => { %>
+                    <% question.options.forEach((option, optionIndex) => { %>
                       <option value="<%= option %>"><%= option %></option>
                     <% }) %>
                   </select>
-
+                
                 <% } else if (question.question_type === 'file_upload') { %>
                   <input type="file" name="answer_<%= questionIndex %>" />
                 <% } %>
               </div>
             <% }) %>
-
+            
             <button type="submit" class="submit-btn">Submit Form</button>
           </form>
         </div>
