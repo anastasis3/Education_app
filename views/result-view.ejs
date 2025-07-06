@@ -57,12 +57,35 @@
       display: inline-block;
       margin-bottom: 1rem;
     }
+    .success-message {
+      background: #d4edda;
+      color: #155724;
+      padding: 1rem;
+      border-radius: 4px;
+      margin-bottom: 1rem;
+      border: 1px solid #c3e6cb;
+    }
+    .error-message {
+      background: #f8d7da;
+      color: #721c24;
+      padding: 1rem;
+      border-radius: 4px;
+      margin-bottom: 1rem;
+      border: 1px solid #f5c6cb;
+    }
   </style>
 </head>
 <body>
   <a href="/results">← Back to results list</a>
   <h1>Results for: <%= form.title %></h1>
   <h3>Student ID: <%= studentId %></h3>
+
+  <!-- Показать сообщение об успехе/ошибке если есть -->
+  <% if (typeof message !== 'undefined' && message) { %>
+    <div class="success-message">
+      <%= message %>
+    </div>
+  <% } %>
 
   <% if (answers.length === 0) { %>
     <p>No answers submitted by this student.</p>
@@ -80,7 +103,8 @@
 
   <form action="/results/grade" method="POST">
     <input type="hidden" name="student_id" value="<%= studentId %>">
-    <input type="hidden" name="form_id" value="<%= form.form_id %>">
+    <!-- ИСПРАВЛЕНО: используем form.id вместо form.form_id -->
+    <input type="hidden" name="form_id" value="<%= form.id %>">
 
     <label for="grade">Grade (0-100):</label>
     <input type="number" id="grade" name="grade" min="0" max="100" step="0.01" value="<%= grade ? grade.grade : '' %>" required>
@@ -90,5 +114,14 @@
 
     <button type="submit">Save Grade</button>
   </form>
+
+  <!-- Отладочная информация (можно удалить после исправления) -->
+  <script>
+    console.log('Debug info:', {
+      formId: '<%= form.id %>',
+      studentId: '<%= studentId %>',
+      formTitle: '<%= form.title %>'
+    });
+  </script>
 </body>
 </html>
