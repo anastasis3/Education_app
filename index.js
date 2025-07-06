@@ -89,6 +89,19 @@ app.post('/login', async (req, res) => {
   }
 });
 
+
+app.post('/logout', (req, res) => {
+  req.session.destroy(err => {
+    if (err) {
+      console.error('Ошибка при выходе из системы:', err);
+      return res.redirect('/');
+    }
+    res.clearCookie('connect.sid');
+    res.redirect('/login'); 
+  });
+});
+
+
 // Панель пользователя
 app.get('/dashboard', (req, res) => {
   if (!req.session.user) {

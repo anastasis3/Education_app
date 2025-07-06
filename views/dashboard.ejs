@@ -82,10 +82,38 @@
       margin-top: 2rem;
       font-size: 1rem;
     }
+
+    .logout-container {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+}
+
+.logout-container button {
+  background-color: #e74c3c;
+  color: white;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.logout-container button:hover {
+  background-color: #c0392b;
+}
+
   </style>
 </head>
 <body>
   <main>
+      <div class="logout-container">
+      <form action="/logout" method="POST">
+        <button type="submit">Logout</button>
+      </form>
+    </div>
+
     <h1>Welcome, <%= user.email %>!</h1>
 
     <% if (user.role === 'teacher') { %>
