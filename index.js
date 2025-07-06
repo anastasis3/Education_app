@@ -700,7 +700,12 @@ async function sendGradeNotification(studentEmail, studentName, formTitle, grade
 }
 
 
+// Добавьте этот роут в ваш основной файл приложения (app.js, server.js или index.js)
+// Роут для сохранения оценки
 app.post('/results/grade', async (req, res) => {
+  console.log('POST /results/grade called');
+  console.log('Request body:', req.body);
+  
   if (!req.session.user || req.session.user.role !== 'teacher') {
     return res.status(403).send('Доступ запрещён. Только для преподавателей.');
   }
@@ -711,13 +716,18 @@ app.post('/results/grade', async (req, res) => {
   try {
     // Проверяем, что все необходимые данные присутствуют
     if (!student_id || !form_id || grade === undefined || grade === null) {
+      console.log('Missing required fields:', { student_id, form_id, grade });
       return res.status(400).send('Не все данные заполнены');
     }
 
     // Проверяем, что оценка в допустимом диапазоне
-    if (grade < 0 || grade > 100) {
+    const gradeNum = parseFloat(grade);
+    if (isNaN(gradeNum) || gradeNum < 0 || gradeNum > 100) {
+      console.log('Invalid grade value:', grade);
       return res.status(400).send('Оценка должна быть от 0 до 100');
     }
+
+    console.log('Saving grade:', { teacher_id, student_id, form_id, grade: gradeNum, comment });
 
     // Проверяем, существует ли уже оценка для этого студента и формы
     const existingGrade = await pool.query(
@@ -729,14 +739,16 @@ app.post('/results/grade', async (req, res) => {
       // Обновляем существующую оценку
       await pool.query(
         'UPDATE grades SET grade = $1, comment = $2, graded_at = CURRENT_TIMESTAMP WHERE teacher_id = $3 AND student_id = $4 AND form_id = $5',
-        [grade, comment || '', teacher_id, student_id, form_id]
+        [gradeNum, comment || '', teacher_id, student_id, form_id]
       );
+      console.log('Grade updated successfully');
     } else {
       // Создаем новую оценку
       await pool.query(
         'INSERT INTO grades (teacher_id, student_id, form_id, grade, comment) VALUES ($1, $2, $3, $4, $5)',
-        [teacher_id, student_id, form_id, grade, comment || '']
+        [teacher_id, student_id, form_id, gradeNum, comment || '']
       );
+      console.log('New grade created successfully');
     }
 
     // Получаем данные студента и формы для отправки уведомления
@@ -754,16 +766,21 @@ app.post('/results/grade', async (req, res) => {
       const student = studentData.rows[0];
       const form = formData.rows[0];
 
-      // Отправляем уведомление студенту
+      // Отправляем уведомление студенту (если настроен email)
       try {
-        await sendGradeNotification(
-          student.email,
-          student.name || student.email,
-          form.title,
-          grade,
-          comment
-        );
-        console.log(`Уведомление об оценке отправлено студенту ${student.email}`);
+        // Проверяем, настроен ли transporter для email
+        if (typeof transporter !== 'undefined' && transporter) {
+          await sendGradeNotification(
+            student.email,
+            student.name || student.email,
+            form.title,
+            gradeNum,
+            comment
+          );
+          console.log(`Уведомление об оценке отправлено студенту ${student.email}`);
+        } else {
+          console.log('Email transporter not configured, skipping email notification');
+        }
       } catch (emailError) {
         console.error('Ошибка при отправке уведомления:', emailError);
         // Не останавливаем процесс, если не удалось отправить email
@@ -771,7 +788,7 @@ app.post('/results/grade', async (req, res) => {
     }
 
     // Перенаправляем обратно на страницу результатов с сообщением об успехе
-    res.redirect(`/results/${form_id}/${student_id}?message=Оценка успешно сохранена`);
+    res.redirect(`/results/view/${form_id}/${student_id}?message=Оценка успешно сохранена`);
 
   } catch (err) {
     console.error('Ошибка при сохранении оценки:', err);
@@ -779,6 +796,83 @@ app.post('/results/grade', async (req, res) => {
   }
 });
 
+// Функция для отправки уведомления об оценке (добавьте, если у вас её нет)
+async function sendGradeNotification(studentEmail, studentName, formTitle, grade, comment) {
+  // Проверяем, настроен ли transporter
+  if (typeof transporter === 'undefined' || !transporter) {
+    console.log('Email transporter not configured');
+    return;
+  }
+
+  const subject = `Оценка за тест: ${formTitle}`;
+  
+  let html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #4b4fcf;">Уведомление об оценке</h2>
+      <p>Здравствуйте, ${studentName}!</p>
+      <p>Вы получили оценку за тест: <strong>${formTitle}</strong></p>
+      <div style="background: #f0f4ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="color: #4b4fcf; margin-top: 0;">Ваша оценка: ${grade}/100</h3>
+  `;
+  
+  if (comment && comment.trim()) {
+    html += `
+        <p><strong>Комментарий преподавателя:</strong></p>
+        <p style="font-style: italic; color: #666;">${comment}</p>
+    `;
+  }
+  
+  html += `
+      </div>
+      <p style="color: #666; font-size: 14px;">
+        Это автоматическое уведомление. Пожалуйста, не отвечайте на это письмо.
+      </p>
+    </div>
+  `;
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER || 'anastacua3a@gmail.com',
+    to: studentEmail,
+    subject: subject,
+    html: html
+  };
+
+  return transporter.sendMail(mailOptions);
+}
+
+// Роут для студентов, чтобы они могли посмотреть свои оценки
+app.get('/my-grades', async (req, res) => {
+  if (!req.session.user || req.session.user.role !== 'student') {
+    return res.status(403).send('Доступ запрещён. Только для студентов.');
+  }
+
+  const studentId = req.session.user.id;
+
+  try {
+    const gradesResult = await pool.query(`
+      SELECT 
+        g.grade, 
+        g.comment, 
+        g.graded_at,
+        ft.title as form_title,
+        u.name as teacher_name
+      FROM grades g
+      JOIN form_templates ft ON g.form_id = ft.id
+      JOIN users u ON g.teacher_id = u.id
+      WHERE g.student_id = $1
+      ORDER BY g.graded_at DESC
+    `, [studentId]);
+
+    res.render('my-grades', { 
+      grades: gradesResult.rows,
+      user: req.session.user
+    });
+
+  } catch (err) {
+    console.error('Ошибка при получении оценок:', err);
+    res.status(500).send('Ошибка сервера');
+  }
+});
 
 // Запуск сервера
 app.listen(port, () => {
