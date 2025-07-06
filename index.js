@@ -884,7 +884,7 @@ app.get('/grades', async (req, res) => {
         g.comment, 
         g.graded_at,
         ft.title as form_title,
-        u.name as teacher_name
+        u.email as teacher_name
       FROM grades g
       JOIN form_templates ft ON g.form_id = ft.id
       JOIN users u ON g.teacher_id = u.id
