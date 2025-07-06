@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>My Grades</title>
   <style>
     body {
@@ -29,20 +29,23 @@
       color: #5a4fcf;
     }
 
+    /* Серая кнопка "назад" */
     .back-link {
-  display: inline-block;
-  margin-bottom: 2rem;
-  padding: 0.5rem 1rem;
-  background: #e9ecef;
-  border-radius: 6px;
-  color: #495057 !important;
-  text-decoration: none;
-  font-weight: 600;
-}
+      display: inline-block;
+      margin-bottom: 2rem;
+      padding: 0.6rem 1.2rem;
+      background: #6c757d;       /* насыщенный серый */
+      border-radius: 6px;
+      color: white !important;   /* белый текст */
+      text-decoration: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
 
-.back-link:hover {
-  background: #dee2e6;
-}
+    .back-link:hover {
+      background: #5a6268;       /* чуть темнее при наведении */
+    }
 
     .grade-card {
       background: white;
