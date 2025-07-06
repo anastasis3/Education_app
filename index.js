@@ -575,6 +575,7 @@ app.get('/active-form', async (req, res) => {
 });
 
 // Route to handle form submission
+// Route to handle form submission
 app.post('/submit-answer/:formId', async (req, res) => {
   if (!req.session.user || req.session.user.role !== 'student') {
     return res.status(403).send('Доступ запрещён. Только для студентов.');
@@ -584,6 +585,8 @@ app.post('/submit-answer/:formId', async (req, res) => {
   const studentId = req.session.user.id;
 
   try {
+    console.log('Received form data:', req.body); // Отладочная информация
+
     const assignmentCheck = await pool.query(
       'SELECT 1 FROM form_assignments WHERE form_id = $1 AND user_id = $2',
       [formId, studentId]
@@ -617,7 +620,10 @@ app.post('/submit-answer/:formId', async (req, res) => {
       const answerKey = `answer_${question.question_order - 1}`;
       let answerValue = req.body[answerKey];
 
-      if (answerValue) {
+      console.log(`Processing question ${question.question_order}: key=${answerKey}, value=${answerValue}`);
+
+      // Проверяем, есть ли ответ для этого вопроса
+      if (answerValue !== undefined && answerValue !== null && answerValue !== '') {
         if (Array.isArray(answerValue)) {
           answerValue = answerValue.join(', ');
         }
@@ -625,6 +631,12 @@ app.post('/submit-answer/:formId', async (req, res) => {
         await pool.query(
           'INSERT INTO answers (response_id, question_id, answer_text) VALUES ($1, $2, $3)',
           [responseId, question.id, answerValue]
+        );
+      } else {
+        // Если ответ пустой, все равно сохраняем пустую строку
+        await pool.query(
+          'INSERT INTO answers (response_id, question_id, answer_text) VALUES ($1, $2, $3)',
+          [responseId, question.id, '']
         );
       }
     }
@@ -637,6 +649,17 @@ app.post('/submit-answer/:formId', async (req, res) => {
   }
 });
 
+// Дополнительная функция для отладки - показать все данные формы
+app.post('/debug-form/:formId', (req, res) => {
+  console.log('Debug - Form ID:', req.params.formId);
+  console.log('Debug - Request body:', req.body);
+  console.log('Debug - All form keys:', Object.keys(req.body));
+  res.json({ 
+    formId: req.params.formId, 
+    body: req.body,
+    keys: Object.keys(req.body)
+  });
+});
 // Функция для отправки уведомления об оценке
 async function sendGradeNotification(studentEmail, studentName, formTitle, grade, comment) {
   const subject = `Оценка за тест: ${formTitle}`;

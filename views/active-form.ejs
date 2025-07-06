@@ -152,60 +152,70 @@
       </div>
     <% } %>
 
-    <% if (forms.length === 0) { %>
-      <div class="message info-message">
-        У вас нет активных заданий для заполнения.
-      </div>
-    <% } else { %>
-      <% forms.forEach(form => { %>
-        <div class="form-container">
-          <form action="/submit-answer/<%= form.id %>" method="POST" enctype="multipart/form-data">
-            <h2><%= form.title %></h2>
+    <!-- Пример правильного шаблона формы -->
+<% if (forms.length > 0) { %>
+  <% forms.forEach((form, formIndex) => { %>
+    <div class="form-container">
+      <h2><%= form.title %></h2>
+      
+      <form method="POST" action="/submit-answer/<%= form.id %>">
+        <% form.questions.forEach((question, questionIndex) => { %>
+          <div class="question-block">
+            <h3>Вопрос <%= questionIndex + 1 %>: <%= question.question_text %></h3>
             
-            <% form.questions.forEach((question, i) => { %>
-              <div class="question-block">
-                <p><%= question.question_text %></p>
-
-                <% if (question.question_type === 'radio') { %>
-                  <% question.options.forEach((option, j) => { %>
-                    <div class="option-group">
-                      <label>
-                        <input type="radio" name="answer_<%= i %>" value="<%= option %>" required />
-                        <%= option %>
-                      </label>
-                    </div>
-                  <% }); %>
-                <% } else if (question.question_type === 'checkbox') { %>
-                  <% question.options.forEach((option, j) => { %>
-                    <div class="option-group">
-                      <label>
-                        <input type="checkbox" name="answer_<%= i %>" value="<%= option %>" />
-                        <%= option %>
-                      </label>
-                    </div>
-                  <% }); %>
-                <% } else if (question.question_type === 'dropdown') { %>
-                  <select name="answer_<%= i %>" required>
-                    <option value="">-- Select an option --</option>
-                    <% question.options.forEach((option, j) => { %>
-                      <option value="<%= option %>"><%= option %></option>
-                    <% }); %>
-                  </select>
-                <% } else if (question.question_type === 'short_text') { %>
-                  <input type="text" name="answer_<%= i %>" required />
-                <% } else if (question.question_type === 'long_text') { %>
-                  <textarea name="answer_<%= i %>" rows="4" required></textarea>
-                <% } else if (question.question_type === 'file_upload') { %>
-                  <input type="file" name="answer_<%= i %>" />
-                <% } %>
-              </div>
-            <% }); %>
-
-            <button type="submit">Submit Form</button>
-          </form>
-        </div>
-      <% }); %>
-    <% } %>
+            <% if (question.question_type === 'text') { %>
+              <input type="text" 
+                     name="answer_<%= questionIndex %>" 
+                     placeholder="Введите ваш ответ"
+                     required>
+            
+            <% } else if (question.question_type === 'textarea') { %>
+              <textarea name="answer_<%= questionIndex %>" 
+                        placeholder="Введите развернутый ответ"
+                        rows="5"
+                        required></textarea>
+            
+            <% } else if (question.question_type === 'radio') { %>
+              <% question.options.forEach((option, optionIndex) => { %>
+                <div class="radio-option">
+                  <input type="radio" 
+                         name="answer_<%= questionIndex %>" 
+                         value="<%= option %>" 
+                         id="q<%= questionIndex %>_opt<%= optionIndex %>"
+                         required>
+                  <label for="q<%= questionIndex %>_opt<%= optionIndex %>"><%= option %></label>
+                </div>
+              <% }) %>
+            
+            <% } else if (question.question_type === 'checkbox') { %>
+              <% question.options.forEach((option, optionIndex) => { %>
+                <div class="checkbox-option">
+                  <input type="checkbox" 
+                         name="answer_<%= questionIndex %>" 
+                         value="<%= option %>" 
+                         id="q<%= questionIndex %>_chk<%= optionIndex %>">
+                  <label for="q<%= questionIndex %>_chk<%= optionIndex %>"><%= option %></label>
+                </div>
+              <% }) %>
+            
+            <% } else if (question.question_type === 'select') { %>
+              <select name="answer_<%= questionIndex %>" required>
+                <option value="">Выберите вариант</option>
+                <% question.options.forEach((option, optionIndex) => { %>
+                  <option value="<%= option %>"><%= option %></option>
+                <% }) %>
+              </select>
+            <% } %>
+          </div>
+        <% }) %>
+        
+        <button type="submit" class="submit-btn">Отправить ответы</button>
+      </form>
+    </div>
+  <% }) %>
+<% } else { %>
+  <p>Нет доступных форм для заполнения.</p>
+<% } %>
   </div>
 </body>
 </html>
