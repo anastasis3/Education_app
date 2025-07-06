@@ -536,14 +536,6 @@ app.get('/active-form', async (req, res) => {
       ORDER BY ft.created_at DESC
     `, [studentId]);
 
-    if (assignedFormsResult.rows.length === 0) {
-      return res.render('active-form', { 
-        forms: [], 
-        user: req.session.user,
-        message: 'У вас нет активных заданий для заполнения.' 
-      });
-    }
-
     const formsWithDetails = [];
     
     for (const form of assignedFormsResult.rows) {
